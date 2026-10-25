@@ -20,6 +20,17 @@ android {
         versionName = "0.3.0"
     }
 
+    signingConfigs {
+        // Clave de depuración fija para que cada APK de CI pueda instalarse encima del anterior
+        // (y para registrar su SHA-1 en Firebase). No usar para publicar en Play Store.
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true

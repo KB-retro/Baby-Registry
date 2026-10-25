@@ -3,7 +3,7 @@
 App Android para registrar el día a día del bebé: tomas, sueño, pañales y más.
 Hecha en **Kotlin + Jetpack Compose** (Material 3), funciona sin conexión.
 
-## Funciones (fase 1)
+## Funciones
 
 - **Pecho** con temporizador por lado (izquierdo/derecho), pausa, cambio de lado y sugerencia de por qué lado empezar.
 - **Biberón**: ml con atajos rápidos, fórmula o leche materna.
@@ -12,6 +12,10 @@ Hecha en **Kotlin + Jetpack Compose** (Material 3), funciona sin conexión.
 - **Pañales**: pis/caca/ambos, color con aviso si conviene consultar al pediatra.
 - **Inicio**: temporizadores activos, tiempo desde la última toma/pañal, estado despierto/dormido y resumen del día.
 - **Historial** agrupado por días, con filtros por tipo y borrado.
+- **Editar** cualquier registro terminado y el perfil del bebé (toca su inicial en Inicio).
+- **Gráficas** de 7, 14 o 30 días: tomas, ml de biberón, sueño, pañales (pis/caca) y patrón de sueño y tomas de 24 h, con medias diarias.
+- **Crecimiento**: peso, talla y perímetro craneal sobre las curvas de percentiles de la OMS (P3–P97, 0-5 años) con el percentil de cada medida.
+- **Salud**: temperatura (con aviso de fiebre), medicación con recordatorio de la próxima dosis y citas/vacunas con notificación.
 - Colores dinámicos (Material You) y modo oscuro.
 
 ## Arquitectura
@@ -23,10 +27,11 @@ Hecha en **Kotlin + Jetpack Compose** (Material 3), funciona sin conexión.
 
 ```
 app/src/main/java/com/kbretro/babyregistry/
-├── data/        # Room: entidades, DAOs, repositorio, lógica del temporizador
+├── data/        # Room: entidades, DAOs, migraciones, repositorio, temporizador
 ├── di/          # Módulos de Hilt
-├── domain/      # Cálculos (resumen del día)
-└── ui/          # Pantallas: home, history, onboarding, theme, common
+├── domain/      # Cálculos: resumen del día, estadísticas, curvas OMS
+├── reminders/   # Notificaciones (AlarmManager) y reprogramación al reiniciar
+└── ui/          # Pantallas: home, history, stats, growth, health, entry, onboarding
 ```
 
 ## Compilar
@@ -43,5 +48,11 @@ desde la pestaña **Actions → (ejecución) → Artifacts**.
 
 ## Hoja de ruta
 
-- **Fase 2**: gráficas y tendencias, crecimiento con percentiles OMS, salud (temperatura, medicación, vacunas), editar registros.
+- ~~**Fase 2**: gráficas, crecimiento con percentiles OMS, salud y edición de registros.~~ ✅
 - **Fase 3**: sincronización entre cuidadores (Firebase), widgets, notificación con temporizador, predicciones de próxima toma/siesta, varios bebés, exportar PDF.
+
+## Datos de crecimiento
+
+Las tablas LMS de `domain/WhoTables.kt` se generan a partir de los
+[Patrones de Crecimiento Infantil de la OMS](https://www.who.int/tools/child-growth-standards)
+(vía el paquete `pygrowup`, licencia BSD). Son orientativas y no sustituyen el criterio del pediatra.

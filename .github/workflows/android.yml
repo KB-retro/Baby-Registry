@@ -27,3 +27,4 @@ jobs:
         with:
           name: baby-registry-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+

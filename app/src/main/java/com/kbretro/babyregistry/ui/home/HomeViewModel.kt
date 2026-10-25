@@ -9,6 +9,7 @@ import com.kbretro.babyregistry.data.model.EventEntity
 import com.kbretro.babyregistry.data.model.EventType
 import com.kbretro.babyregistry.data.repository.TrackerRepository
 import com.kbretro.babyregistry.domain.DayRange
+import com.kbretro.babyregistry.domain.Predictions
 import com.kbretro.babyregistry.reminders.Reminders
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -38,6 +40,9 @@ data class HomeUiState(
     val lastSleep: EventEntity? = null,
     val lastBreast: EventEntity? = null,
     val lastBottle: EventEntity? = null,
+    /** Eventos de los últimos días, para las predicciones. */
+    val window: List<EventEntity> = emptyList(),
+    val babies: List<BabyEntity> = emptyList(),
 ) {
     val activeTypes: Set<EventType> get() = active.mapTo(mutableSetOf()) { it.type }
 
@@ -70,17 +75,18 @@ class HomeViewModel @Inject constructor(
 
     val state: StateFlow<HomeUiState> = repo.currentBaby.flatMapLatest { baby ->
         if (baby == null) return@flatMapLatest flowOf(HomeUiState())
-        val today = day.flatMapLatest { (start, end) ->
-            repo.overlapping(baby.id, start, end).map { Triple(start, end, it) }
+        val window = day.flatMapLatest { (start, end) ->
+            repo.overlapping(baby.id, start - Predictions.WINDOW_MILLIS, end).map { Triple(start, end, it) }
         }
-        val core = combine(repo.active(baby.id), today, repo.recent(baby.id, 8)) { active, (start, end, events), recent ->
+        val core = combine(repo.active(baby.id), window, repo.recent(baby.id, 8)) { active, (start, end, events), recent ->
             HomeUiState(
                 baby = baby,
                 active = active,
-                today = events,
+                today = events.filter { it.startTime < end && (it.endTime ?: Long.MAX_VALUE) >= start },
                 dayStart = start,
                 dayEnd = end,
                 recent = recent,
+                window = events,
             )
         }
         val latest = combine(
@@ -100,7 +106,8 @@ class HomeViewModel @Inject constructor(
                 lastBottle = l.bottle,
             )
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
+    }.combine(repo.babies) { state, babies -> state.copy(babies = babies) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
     private val babyId: Long? get() = state.value.baby?.id
 
@@ -135,7 +142,20 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun updateBaby(baby: BabyEntity) = viewModelScope.launch { repo.updateBaby(baby) }
+    fun saveBaby(baby: BabyEntity) = viewModelScope.launch {
+        if (baby.id == 0L) repo.addBaby(baby) else repo.updateBaby(baby)
+    }
+
+    fun selectBaby(id: Long) = viewModelScope.launch { repo.selectBaby(id) }
+
+    /** Borra el bebé y todos sus registros; cancela antes sus recordatorios pendientes. */
+    fun deleteBaby(baby: BabyEntity) = viewModelScope.launch {
+        val now = now()
+        repo.pendingEventReminders(now).filter { it.babyId == baby.id }.forEach { reminders.cancelEvent(it.id) }
+        repo.pendingAppointmentReminders(now).filter { it.babyId == baby.id }.forEach { reminders.cancelAppointment(it.id) }
+        repo.deleteBaby(baby)
+        repo.babies.first().firstOrNull { it.id != baby.id }?.let { repo.selectBaby(it.id) }
+    }
 
     private fun withBaby(block: suspend (Long) -> Unit) {
         val id = babyId ?: return

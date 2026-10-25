@@ -1,10 +1,12 @@
 package com.kbretro.babyregistry.ui.stats
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kbretro.babyregistry.data.model.EventEntity
 import com.kbretro.babyregistry.data.repository.TrackerRepository
 import com.kbretro.babyregistry.domain.DayRange
+import com.kbretro.babyregistry.export.ReportExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +31,7 @@ data class StatsUiState(
 @HiltViewModel
 class StatsViewModel @Inject constructor(
     private val repo: TrackerRepository,
+    private val exporter: ReportExporter,
 ) : ViewModel() {
 
     private val range = MutableStateFlow(7)
@@ -49,4 +52,7 @@ class StatsViewModel @Inject constructor(
     fun setRange(days: Int) {
         range.value = days
     }
+
+    /** Genera el informe PDF del periodo seleccionado; devuelve su Uri para compartir. */
+    suspend fun exportReport(): Uri? = exporter.export(range.value)
 }

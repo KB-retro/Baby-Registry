@@ -1,5 +1,6 @@
 package com.kbretro.babyregistry.ui.stats
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -8,18 +9,28 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -37,6 +48,7 @@ import com.kbretro.babyregistry.ui.common.SleepPatternChart
 import com.kbretro.babyregistry.ui.common.rememberNow
 import com.kbretro.babyregistry.ui.common.sparseLabels
 import com.kbretro.babyregistry.ui.common.style
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -56,6 +68,24 @@ private val DirtyColor = Color(0xFFC08A2E)
 fun StatsScreen(viewModel: StatsViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val now = rememberNow(60_000L)
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var exporting by remember { mutableStateOf(false) }
+    fun export() {
+        if (exporting) return
+        exporting = true
+        scope.launch {
+            val uri = viewModel.exportReport()
+            exporting = false
+            if (uri != null) {
+                val send = Intent(Intent.ACTION_SEND)
+                    .setType("application/pdf")
+                    .putExtra(Intent.EXTRA_STREAM, uri)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                context.startActivity(Intent.createChooser(send, "Compartir informe"))
+            }
+        }
+    }
     val stats = remember(state.events, state.days, now) { dailyStats(state.events, state.days, now) }
     val patterns = remember(state.events, state.days, now) {
         state.days.takeLast(minOf(state.days.size, 14)).reversed().map { dayPattern(state.events, it, now) }
@@ -68,7 +98,20 @@ fun StatsScreen(viewModel: StatsViewModel = hiltViewModel()) {
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        topBar = { TopAppBar(title = { Text("Gráficas") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Gráficas") },
+                actions = {
+                    if (exporting) {
+                        CircularProgressIndicator(Modifier.padding(12.dp).size(24.dp), strokeWidth = 2.dp)
+                    } else {
+                        IconButton(onClick = ::export, enabled = state.events.isNotEmpty()) {
+                            Icon(Icons.Rounded.PictureAsPdf, contentDescription = "Exportar informe PDF")
+                        }
+                    }
+                },
+            )
+        },
     ) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize(),

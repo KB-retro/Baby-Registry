@@ -10,6 +10,8 @@ import com.kbretro.babyregistry.data.model.EventEntity
 import com.kbretro.babyregistry.data.model.EventType
 import com.kbretro.babyregistry.data.model.GrowthEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -20,18 +22,31 @@ class TrackerRepository @Inject constructor(
     private val eventDao: EventDao,
     private val growthDao: GrowthDao,
     private val appointmentDao: AppointmentDao,
+    private val selectedBaby: SelectedBabyStore,
 ) {
-    val currentBaby: Flow<BabyEntity?> = babyDao.observeFirst()
+    val babies: Flow<List<BabyEntity>> = babyDao.observeAll()
+
+    /** Bebé seleccionado; si no hay selección válida, el primero. */
+    val currentBaby: Flow<BabyEntity?> = combine(babies, selectedBaby.selectedId) { list, id ->
+        list.firstOrNull { it.id == id } ?: list.firstOrNull()
+    }.distinctUntilChanged()
 
     suspend fun currentBabyId(): Long? = currentBaby.first()?.id
 
-    suspend fun addBaby(baby: BabyEntity): Long = babyDao.insert(baby)
+    suspend fun addBaby(baby: BabyEntity): Long = babyDao.insert(baby).also { selectedBaby.select(it) }
 
     suspend fun updateBaby(baby: BabyEntity) = babyDao.update(baby)
+
+    suspend fun deleteBaby(baby: BabyEntity) = babyDao.delete(baby)
+
+    suspend fun selectBaby(id: Long) = selectedBaby.select(id)
 
     // Eventos
 
     fun active(babyId: Long): Flow<List<EventEntity>> = eventDao.observeActive(babyId)
+
+    /** Temporizadores en curso de todos los bebés (para la notificación). */
+    fun allActive(): Flow<List<EventEntity>> = eventDao.observeAllActive()
 
     fun overlapping(babyId: Long, from: Long, to: Long): Flow<List<EventEntity>> =
         eventDao.observeOverlapping(babyId, from, to)

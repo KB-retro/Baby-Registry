@@ -16,6 +16,11 @@ Hecha en **Kotlin + Jetpack Compose** (Material 3), funciona sin conexión.
 - **Gráficas** de 7, 14 o 30 días: tomas, ml de biberón, sueño, pañales (pis/caca) y patrón de sueño y tomas de 24 h, con medias diarias.
 - **Crecimiento**: peso, talla y perímetro craneal sobre las curvas de percentiles de la OMS (P3–P97, 0-5 años) con el percentil de cada medida.
 - **Salud**: temperatura (con aviso de fiebre), medicación con recordatorio de la próxima dosis y citas/vacunas con notificación.
+- **Varios bebés** (gemelos, hermanos): toca la inicial en Inicio para cambiar, editar o añadir.
+- **Notificación con cronómetro** mientras hay una toma o un sueño en marcha, con botones para cambiar de lado, pausar o terminar.
+- **Widget** de pantalla de inicio: última toma, último pañal y estado de sueño, con botones de dormir/despertar y pañal.
+- **Predicciones** de la próxima toma y del próximo sueño según los últimos 3 días.
+- **Informe PDF** para el pediatra (desde Gráficas): medias, tabla día a día, crecimiento con percentiles, salud y próximas citas.
 - Colores dinámicos (Material You) y modo oscuro.
 
 ## Arquitectura
@@ -29,8 +34,10 @@ Hecha en **Kotlin + Jetpack Compose** (Material 3), funciona sin conexión.
 app/src/main/java/com/kbretro/babyregistry/
 ├── data/        # Room: entidades, DAOs, migraciones, repositorio, temporizador
 ├── di/          # Módulos de Hilt
-├── domain/      # Cálculos: resumen del día, estadísticas, curvas OMS
-├── reminders/   # Notificaciones (AlarmManager) y reprogramación al reiniciar
+├── domain/      # Cálculos: resumen del día, estadísticas, curvas OMS, predicciones
+├── export/      # Informe PDF
+├── reminders/   # Recordatorios, notificación del temporizador y reprogramación al reiniciar
+├── widget/      # Widget de pantalla de inicio (Glance)
 └── ui/          # Pantallas: home, history, stats, growth, health, entry, onboarding
 ```
 
@@ -49,7 +56,8 @@ desde la pestaña **Actions → (ejecución) → Artifacts**.
 ## Hoja de ruta
 
 - ~~**Fase 2**: gráficas, crecimiento con percentiles OMS, salud y edición de registros.~~ ✅
-- **Fase 3**: sincronización entre cuidadores (Firebase), widgets, notificación con temporizador, predicciones de próxima toma/siesta, varios bebés, exportar PDF.
+- ~~**Fase 3**: widgets, notificación con temporizador, predicciones, varios bebés, exportar PDF.~~ ✅
+- **Sincronización entre cuidadores** (Firebase): pendiente de crear el proyecto de Firebase.
 
 ## Datos de crecimiento
 

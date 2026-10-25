@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.kbretro.babyregistry.data.model.EventEntity
 import com.kbretro.babyregistry.data.model.EventType
 import com.kbretro.babyregistry.data.repository.TrackerRepository
+import com.kbretro.babyregistry.reminders.Reminders
 import com.kbretro.babyregistry.ui.common.Fmt
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -29,6 +30,7 @@ data class HistoryUiState(
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
     private val repo: TrackerRepository,
+    private val reminders: Reminders,
 ) : ViewModel() {
 
     private val filter = MutableStateFlow<EventType?>(null)
@@ -49,5 +51,8 @@ class HistoryViewModel @Inject constructor(
         filter.value = type
     }
 
-    fun delete(event: EventEntity) = viewModelScope.launch { repo.delete(event) }
+    fun delete(event: EventEntity) = viewModelScope.launch {
+        repo.delete(event)
+        reminders.cancelEvent(event.id)
+    }
 }

@@ -44,6 +44,31 @@ object Fmt {
             .replaceFirstChar { it.titlecase(spanish) }
     }
 
+    fun temperature(celsius: Double): String = "%.1f °C".format(spanish, celsius)
+
+    /** Número con hasta [decimals] decimales y coma decimal: "4,25". */
+    fun decimal(value: Double, decimals: Int = 2): String {
+        val text = "%.${decimals}f".format(spanish, value)
+        return if (decimals == 0) text else text.trimEnd('0').trimEnd(',')
+    }
+
+    /** Interpreta "4,25" o "4.25". */
+    fun parseDecimal(text: String): Double? = text.trim().replace(',', '.').toDoubleOrNull()
+
+    /** "Hoy 14:05", "Mañana 09:30" o "3 oct 09:30" (para fechas futuras). */
+    fun dayTimeFuture(millis: Long, today: LocalDate = LocalDate.now()): String {
+        val date = localDate(millis)
+        val day = when (date) {
+            today -> "Hoy"
+            today.plusDays(1) -> "Mañana"
+            today.minusDays(1) -> "Ayer"
+            else -> date.format(dayMonthFormat)
+        }
+        return "$day ${time(millis)}"
+    }
+
+    fun shortDay(date: LocalDate): String = date.format(dayMonthFormat)
+
     /** Cronómetro: "05:09" o "1:02:03". */
     fun clock(millis: Long): String {
         val totalSeconds = millis.coerceAtLeast(0) / 1000
@@ -84,6 +109,22 @@ object Fmt {
             else -> plural(p.days, "día", "días")
         }
     }
+
+    /** Cambia la hora de [millis] conservando su día; si el resultado es futuro, usa el día anterior. */
+    fun withTime(millis: Long, hour: Int, minute: Int, now: Long = System.currentTimeMillis()): Long {
+        val zone = ZoneId.systemDefault()
+        val date = localDate(millis)
+        val candidate = date.atTime(hour, minute).atZone(zone).toInstant().toEpochMilli()
+        return if (candidate > now + 60_000) {
+            date.minusDays(1).atTime(hour, minute).atZone(zone).toInstant().toEpochMilli()
+        } else {
+            candidate
+        }
+    }
+
+    /** Fecha y hora futura a partir de un día y una hora concretos. */
+    fun at(date: LocalDate, hour: Int, minute: Int): Long =
+        date.atTime(hour, minute).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
     /** Convierte una hora elegida (h:m) en el instante pasado más reciente con esa hora. */
     fun pastTimeAt(hour: Int, minute: Int, now: Long = System.currentTimeMillis()): Long {

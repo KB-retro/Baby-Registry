@@ -159,7 +159,7 @@ fun NumberStepper(
     }
 }
 
-/** Campo que muestra una hora y abre un selector. Las horas futuras se interpretan como de ayer. */
+/** Campo que muestra una hora y abre un selector. Mantiene el día; si la hora queda en el futuro, pasa al día anterior. */
 @Composable
 fun TimeSelector(label: String, millis: Long, onChange: (Long) -> Unit, modifier: Modifier = Modifier) {
     var show by remember { mutableStateOf(false) }
@@ -176,7 +176,7 @@ fun TimeSelector(label: String, millis: Long, onChange: (Long) -> Unit, modifier
             initialMillis = millis,
             onDismiss = { show = false },
             onConfirm = { h, m ->
-                onChange(Fmt.pastTimeAt(h, m))
+                onChange(Fmt.withTime(millis, h, m))
                 show = false
             },
         )
@@ -197,7 +197,13 @@ fun TimePickerDialog(initialMillis: Long, onDismiss: () -> Unit, onConfirm: (Int
 }
 
 @Composable
-fun EventDetailDialog(event: EventEntity, now: Long, onDismiss: () -> Unit, onDelete: () -> Unit) {
+fun EventDetailDialog(
+    event: EventEntity,
+    now: Long,
+    onDismiss: () -> Unit,
+    onDelete: () -> Unit,
+    onEdit: (() -> Unit)? = null,
+) {
     var confirming by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -216,7 +222,13 @@ fun EventDetailDialog(event: EventEntity, now: Long, onDismiss: () -> Unit, onDe
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } },
+        confirmButton = {
+            if (onEdit != null && event.isEditable && !confirming) {
+                TextButton(onClick = onEdit) { Text("Editar") }
+            } else {
+                TextButton(onClick = onDismiss) { Text("Cerrar") }
+            }
+        },
         dismissButton = {
             TextButton(onClick = { if (confirming) onDelete() else confirming = true }) {
                 Text(

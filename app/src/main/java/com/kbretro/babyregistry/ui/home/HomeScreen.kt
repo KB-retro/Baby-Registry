@@ -28,7 +28,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,7 +37,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kbretro.babyregistry.data.model.EventEntity
 import com.kbretro.babyregistry.data.model.EventType
 import com.kbretro.babyregistry.domain.summarize
+import com.kbretro.babyregistry.ui.common.BabyEditDialog
 import com.kbretro.babyregistry.ui.common.EventDetailDialog
+import com.kbretro.babyregistry.ui.entry.EntryDefaults
+import com.kbretro.babyregistry.ui.entry.EntryRequest
+import com.kbretro.babyregistry.ui.entry.EntrySheet
 import com.kbretro.babyregistry.ui.common.Fmt
 import com.kbretro.babyregistry.ui.common.SectionTitle
 import com.kbretro.babyregistry.ui.common.rememberNow
@@ -49,8 +52,9 @@ import kotlinx.coroutines.launch
 fun HomeScreen(onSeeAll: () -> Unit, viewModel: HomeViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val now = rememberNow()
-    var sheet by rememberSaveable { mutableStateOf<EventType?>(null) }
+    var entry by remember { mutableStateOf<EntryRequest?>(null) }
     var detail by remember { mutableStateOf<EventEntity?>(null) }
+    var editingBaby by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     fun notify(message: String) {
@@ -64,7 +68,7 @@ fun HomeScreen(onSeeAll: () -> Unit, viewModel: HomeViewModel = hiltViewModel())
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
-                navigationIcon = { BabyAvatar(baby.name) },
+                navigationIcon = { BabyAvatar(baby.name, onClick = { editingBaby = true }) },
                 title = {
                     Column {
                         Text(baby.name, style = MaterialTheme.typography.titleLarge)
@@ -115,7 +119,7 @@ fun HomeScreen(onSeeAll: () -> Unit, viewModel: HomeViewModel = hiltViewModel())
             item(key = "actions") {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     SectionTitle("Registrar")
-                    QuickActions(state.activeTypes, onClick = { sheet = it })
+                    QuickActions(state.activeTypes, onClick = { entry = EntryRequest(it) })
                 }
             }
             item(key = "since") { SinceRow(state, now) }
@@ -137,13 +141,14 @@ fun HomeScreen(onSeeAll: () -> Unit, viewModel: HomeViewModel = hiltViewModel())
         }
     }
 
-    sheet?.let { type ->
+    entry?.let { request ->
         EntrySheet(
-            type = type,
-            state = state,
-            viewModel = viewModel,
+            request = request,
+            defaults = EntryDefaults(suggestedSide = state.suggestedSide, lastBottle = state.lastBottle),
+            onStartBreast = viewModel::startBreast,
+            onStartSleep = viewModel::startSleep,
             onDone = ::notify,
-            onDismiss = { sheet = null },
+            onDismiss = { entry = null },
         )
     }
     detail?.let { event ->
@@ -156,13 +161,29 @@ fun HomeScreen(onSeeAll: () -> Unit, viewModel: HomeViewModel = hiltViewModel())
                 detail = null
                 notify("Registro eliminado")
             },
+            onEdit = {
+                detail = null
+                entry = EntryRequest(event.type, event)
+            },
+        )
+    }
+    if (editingBaby) {
+        BabyEditDialog(
+            baby = baby,
+            onDismiss = { editingBaby = false },
+            onSave = {
+                viewModel.updateBaby(it)
+                editingBaby = false
+                notify("Perfil actualizado")
+            },
         )
     }
 }
 
 @Composable
-private fun BabyAvatar(name: String) {
+private fun BabyAvatar(name: String, onClick: () -> Unit) {
     Surface(
+        onClick = onClick,
         shape = CircleShape,
         color = MaterialTheme.colorScheme.primaryContainer,
         modifier = Modifier

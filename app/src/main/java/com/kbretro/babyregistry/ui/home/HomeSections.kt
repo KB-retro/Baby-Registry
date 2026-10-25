@@ -37,7 +37,7 @@ import com.kbretro.babyregistry.ui.common.style
 @Composable
 fun QuickActions(activeTypes: Set<EventType>, onClick: (EventType) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        EventType.entries.forEach { type ->
+        EventType.daily.forEach { type ->
             val style = type.style()
             val active = type in activeTypes
             Surface(

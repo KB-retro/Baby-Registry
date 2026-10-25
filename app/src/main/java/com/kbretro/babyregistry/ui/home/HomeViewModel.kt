@@ -3,15 +3,13 @@ package com.kbretro.babyregistry.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kbretro.babyregistry.data.model.BabyEntity
-import com.kbretro.babyregistry.data.model.BottleContent
 import com.kbretro.babyregistry.data.model.BreastSide
 import com.kbretro.babyregistry.data.model.BreastTimer
-import com.kbretro.babyregistry.data.model.DiaperKind
 import com.kbretro.babyregistry.data.model.EventEntity
 import com.kbretro.babyregistry.data.model.EventType
-import com.kbretro.babyregistry.data.model.StoolColor
 import com.kbretro.babyregistry.data.repository.TrackerRepository
 import com.kbretro.babyregistry.domain.DayRange
+import com.kbretro.babyregistry.reminders.Reminders
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -59,6 +57,7 @@ private data class Latest(
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val repo: TrackerRepository,
+    private val reminders: Reminders,
 ) : ViewModel() {
 
     /** Límites del día actual; se reevalúa periódicamente para cambiar a medianoche. */
@@ -130,70 +129,13 @@ class HomeViewModel @Inject constructor(
     }
 
     fun delete(eventId: Long) = viewModelScope.launch {
-        repo.getEvent(eventId)?.let { repo.delete(it) }
+        repo.getEvent(eventId)?.let {
+            repo.delete(it)
+            reminders.cancelEvent(it.id)
+        }
     }
 
-    fun addManualBreast(start: Long, leftMinutes: Int, rightMinutes: Int, lastSide: BreastSide) = withBaby { id ->
-        val left = leftMinutes * 60_000L
-        val right = rightMinutes * 60_000L
-        repo.insert(
-            EventEntity(
-                babyId = id,
-                type = EventType.BREAST,
-                startTime = start,
-                endTime = start + left + right,
-                leftMillis = left,
-                rightMillis = right,
-                lastSide = lastSide,
-            ),
-        )
-    }
-
-    fun addBottle(ml: Int, content: BottleContent, time: Long, notes: String) = withBaby { id ->
-        repo.insert(
-            EventEntity(
-                babyId = id,
-                type = EventType.BOTTLE,
-                startTime = time,
-                endTime = time,
-                amountMl = ml,
-                bottleContent = content,
-                notes = notes.ifBlank { null },
-            ),
-        )
-    }
-
-    fun addSolid(food: String, isNew: Boolean, reaction: String, time: Long) = withBaby { id ->
-        repo.insert(
-            EventEntity(
-                babyId = id,
-                type = EventType.SOLID,
-                startTime = time,
-                endTime = time,
-                food = food.trim(),
-                isNewFood = isNew,
-                reaction = reaction.ifBlank { null },
-            ),
-        )
-    }
-
-    fun addManualSleep(start: Long, end: Long) = withBaby { id ->
-        repo.insert(EventEntity(babyId = id, type = EventType.SLEEP, startTime = start, endTime = end))
-    }
-
-    fun addDiaper(kind: DiaperKind, color: StoolColor?, time: Long, notes: String) = withBaby { id ->
-        repo.insert(
-            EventEntity(
-                babyId = id,
-                type = EventType.DIAPER,
-                startTime = time,
-                endTime = time,
-                diaperKind = kind,
-                stoolColor = color.takeIf { kind != DiaperKind.WET },
-                notes = notes.ifBlank { null },
-            ),
-        )
-    }
+    fun updateBaby(baby: BabyEntity) = viewModelScope.launch { repo.updateBaby(baby) }
 
     private fun withBaby(block: suspend (Long) -> Unit) {
         val id = babyId ?: return

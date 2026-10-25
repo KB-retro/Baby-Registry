@@ -43,4 +43,10 @@ interface EventDao {
             "ORDER BY startTime DESC LIMIT 1",
     )
     fun observeLatest(babyId: Long, types: List<String>): Flow<EventEntity?>
+
+    @Query("SELECT * FROM events WHERE babyId = :babyId AND type IN (:types) ORDER BY startTime DESC")
+    fun observeByTypes(babyId: Long, types: List<String>): Flow<List<EventEntity>>
+
+    @Query("SELECT * FROM events WHERE reminderAt > :now")
+    suspend fun pendingReminders(now: Long): List<EventEntity>
 }

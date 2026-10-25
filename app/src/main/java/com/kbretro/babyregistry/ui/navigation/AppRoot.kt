@@ -4,8 +4,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.MedicalServices
+import androidx.compose.material.icons.rounded.MonitorWeight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -26,9 +29,12 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.kbretro.babyregistry.data.repository.TrackerRepository
+import com.kbretro.babyregistry.ui.growth.GrowthScreen
+import com.kbretro.babyregistry.ui.health.HealthScreen
 import com.kbretro.babyregistry.ui.history.HistoryScreen
 import com.kbretro.babyregistry.ui.home.HomeScreen
 import com.kbretro.babyregistry.ui.onboarding.OnboardingScreen
+import com.kbretro.babyregistry.ui.stats.StatsScreen
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -48,6 +54,9 @@ class RootViewModel @Inject constructor(repo: TrackerRepository) : ViewModel() {
 private enum class Tab(val route: String, val label: String, val icon: ImageVector) {
     HOME("home", "Inicio", Icons.Rounded.Home),
     HISTORY("history", "Historial", Icons.Rounded.History),
+    STATS("stats", "Gráficas", Icons.Rounded.BarChart),
+    GROWTH("growth", "Crecimiento", Icons.Rounded.MonitorWeight),
+    HEALTH("health", "Salud", Icons.Rounded.MedicalServices),
 }
 
 @Composable
@@ -74,7 +83,7 @@ private fun MainScaffold() {
                         selected = currentRoute == tab.route,
                         onClick = { navController.navigateToTab(tab.route) },
                         icon = { Icon(tab.icon, contentDescription = null) },
-                        label = { Text(tab.label) },
+                        label = { Text(tab.label, maxLines = 1, softWrap = false) },
                     )
                 }
             }
@@ -89,6 +98,9 @@ private fun MainScaffold() {
                 HomeScreen(onSeeAll = { navController.navigateToTab(Tab.HISTORY.route) })
             }
             composable(Tab.HISTORY.route) { HistoryScreen() }
+            composable(Tab.STATS.route) { StatsScreen() }
+            composable(Tab.GROWTH.route) { GrowthScreen() }
+            composable(Tab.HEALTH.route) { HealthScreen() }
         }
     }
 }

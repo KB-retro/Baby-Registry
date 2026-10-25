@@ -5,9 +5,12 @@ import androidx.compose.material.icons.rounded.BabyChangingStation
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.LocalDrink
+import androidx.compose.material.icons.rounded.Medication
 import androidx.compose.material.icons.rounded.Restaurant
+import androidx.compose.material.icons.rounded.Thermostat
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.kbretro.babyregistry.data.model.AppointmentKind
 import com.kbretro.babyregistry.data.model.BottleContent
 import com.kbretro.babyregistry.data.model.BreastSide
 import com.kbretro.babyregistry.data.model.BreastTimer
@@ -25,6 +28,27 @@ fun EventType.style(): EventStyle = when (this) {
     EventType.SOLID -> EventStyle("Sólidos", Icons.Rounded.Restaurant, Color(0xFFF0954A))
     EventType.SLEEP -> EventStyle("Sueño", Icons.Rounded.Bedtime, Color(0xFF7E6BD6))
     EventType.DIAPER -> EventStyle("Pañal", Icons.Rounded.BabyChangingStation, Color(0xFF34A88A))
+    EventType.TEMPERATURE -> EventStyle("Temperatura", Icons.Rounded.Thermostat, Color(0xFFE0603A))
+    EventType.MEDICINE -> EventStyle("Medicamento", Icons.Rounded.Medication, Color(0xFF2E9BB0))
+}
+
+/** Los temporizadores en curso no se editan: primero hay que terminarlos. */
+val EventEntity.isEditable: Boolean get() = !isOngoing
+
+val AppointmentKind.label: String
+    get() = when (this) {
+        AppointmentKind.DOCTOR -> "Pediatra"
+        AppointmentKind.VACCINE -> "Vacuna"
+        AppointmentKind.OTHER -> "Otra cita"
+    }
+
+enum class FeverLevel(val label: String) { NORMAL("Normal"), LOW_GRADE("Febrícula"), FEVER("Fiebre"), LOW("Baja") }
+
+fun feverLevel(celsius: Double): FeverLevel = when {
+    celsius >= 38.0 -> FeverLevel.FEVER
+    celsius >= 37.5 -> FeverLevel.LOW_GRADE
+    celsius < 35.5 -> FeverLevel.LOW
+    else -> FeverLevel.NORMAL
 }
 
 val BreastSide.label: String get() = if (this == BreastSide.LEFT) "Izquierdo" else "Derecho"
@@ -98,4 +122,10 @@ fun EventEntity.detail(now: Long): String = when (type) {
     EventType.SLEEP -> endTime?.let { Fmt.duration(it - startTime) }
         ?: "En curso · ${Fmt.duration(now - startTime)}"
     EventType.DIAPER -> listOfNotNull(diaperKind?.label, stoolColor?.label).joinToString(" · ")
+    EventType.TEMPERATURE -> temperatureC?.let { "${Fmt.temperature(it)} · ${feverLevel(it).label}" } ?: ""
+    EventType.MEDICINE -> listOfNotNull(
+        medicineName,
+        dose?.takeIf { it.isNotBlank() },
+        reminderAt?.takeIf { it > now }?.let { "Próxima: ${Fmt.dayTime(it)}" },
+    ).joinToString(" · ")
 }

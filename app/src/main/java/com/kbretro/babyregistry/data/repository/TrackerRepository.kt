@@ -1,11 +1,16 @@
 package com.kbretro.babyregistry.data.repository
 
+import com.kbretro.babyregistry.data.db.AppointmentDao
 import com.kbretro.babyregistry.data.db.BabyDao
 import com.kbretro.babyregistry.data.db.EventDao
+import com.kbretro.babyregistry.data.db.GrowthDao
+import com.kbretro.babyregistry.data.model.AppointmentEntity
 import com.kbretro.babyregistry.data.model.BabyEntity
 import com.kbretro.babyregistry.data.model.EventEntity
 import com.kbretro.babyregistry.data.model.EventType
+import com.kbretro.babyregistry.data.model.GrowthEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -13,10 +18,18 @@ import javax.inject.Singleton
 class TrackerRepository @Inject constructor(
     private val babyDao: BabyDao,
     private val eventDao: EventDao,
+    private val growthDao: GrowthDao,
+    private val appointmentDao: AppointmentDao,
 ) {
     val currentBaby: Flow<BabyEntity?> = babyDao.observeFirst()
 
+    suspend fun currentBabyId(): Long? = currentBaby.first()?.id
+
     suspend fun addBaby(baby: BabyEntity): Long = babyDao.insert(baby)
+
+    suspend fun updateBaby(baby: BabyEntity) = babyDao.update(baby)
+
+    // Eventos
 
     fun active(babyId: Long): Flow<List<EventEntity>> = eventDao.observeActive(babyId)
 
@@ -30,6 +43,9 @@ class TrackerRepository @Inject constructor(
     fun latest(babyId: Long, vararg types: EventType): Flow<EventEntity?> =
         eventDao.observeLatest(babyId, types.map { it.name })
 
+    fun byTypes(babyId: Long, types: List<EventType>): Flow<List<EventEntity>> =
+        eventDao.observeByTypes(babyId, types.map { it.name })
+
     suspend fun getEvent(id: Long): EventEntity? = eventDao.getById(id)
 
     suspend fun insert(event: EventEntity): Long = eventDao.insert(event)
@@ -37,4 +53,31 @@ class TrackerRepository @Inject constructor(
     suspend fun update(event: EventEntity) = eventDao.update(event)
 
     suspend fun delete(event: EventEntity) = eventDao.delete(event)
+
+    suspend fun pendingEventReminders(now: Long): List<EventEntity> = eventDao.pendingReminders(now)
+
+    // Crecimiento
+
+    fun growth(babyId: Long): Flow<List<GrowthEntity>> = growthDao.observeAll(babyId)
+
+    suspend fun saveGrowth(entry: GrowthEntity) {
+        if (entry.id == 0L) growthDao.insert(entry) else growthDao.update(entry)
+    }
+
+    suspend fun deleteGrowth(entry: GrowthEntity) = growthDao.delete(entry)
+
+    // Citas
+
+    fun appointments(babyId: Long): Flow<List<AppointmentEntity>> = appointmentDao.observeAll(babyId)
+
+    suspend fun getAppointment(id: Long): AppointmentEntity? = appointmentDao.getById(id)
+
+    suspend fun insertAppointment(appointment: AppointmentEntity): Long = appointmentDao.insert(appointment)
+
+    suspend fun updateAppointment(appointment: AppointmentEntity) = appointmentDao.update(appointment)
+
+    suspend fun deleteAppointment(appointment: AppointmentEntity) = appointmentDao.delete(appointment)
+
+    suspend fun pendingAppointmentReminders(now: Long): List<AppointmentEntity> =
+        appointmentDao.pendingReminders(now)
 }

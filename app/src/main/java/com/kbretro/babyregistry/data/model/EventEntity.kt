@@ -45,6 +45,12 @@ data class EventEntity(
     // Pañal
     val diaperKind: DiaperKind? = null,
     val stoolColor: StoolColor? = null,
+    // Salud
+    val temperatureC: Double? = null,
+    val medicineName: String? = null,
+    val dose: String? = null,
+    /** Momento del recordatorio programado (p. ej. próxima dosis), si lo hay. */
+    val reminderAt: Long? = null,
     val notes: String? = null,
 ) {
     val isOngoing: Boolean get() = endTime == null

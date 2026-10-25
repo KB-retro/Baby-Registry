@@ -39,6 +39,8 @@ import com.kbretro.babyregistry.ui.common.EventRow
 import com.kbretro.babyregistry.ui.common.Fmt
 import com.kbretro.babyregistry.ui.common.rememberNow
 import com.kbretro.babyregistry.ui.common.style
+import com.kbretro.babyregistry.ui.entry.EntryRequest
+import com.kbretro.babyregistry.ui.entry.EntrySheet
 import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -47,6 +49,7 @@ fun HistoryScreen(viewModel: HistoryViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val now = rememberNow()
     var detail by remember { mutableStateOf<EventEntity?>(null) }
+    var editing by remember { mutableStateOf<EventEntity?>(null) }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -93,6 +96,17 @@ fun HistoryScreen(viewModel: HistoryViewModel = hiltViewModel()) {
                 viewModel.delete(event)
                 detail = null
             },
+            onEdit = {
+                detail = null
+                editing = event
+            },
+        )
+    }
+    editing?.let { event ->
+        EntrySheet(
+            request = EntryRequest(event.type, event),
+            onDone = {},
+            onDismiss = { editing = null },
         )
     }
 }

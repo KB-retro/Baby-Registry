@@ -27,6 +27,32 @@
             android:exported="false" />
 
         <receiver
+            android:name=".reminders.TimerActionReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".widget.BabyWidgetReceiver"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/baby_widget_info" />
+        </receiver>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <receiver
             android:name=".reminders.BootReceiver"
             android:exported="false">
             <intent-filter>

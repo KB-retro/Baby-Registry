@@ -34,18 +34,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.kbretro.babyregistry.data.model.BabyEntity
 import com.kbretro.babyregistry.data.model.EventEntity
 import com.kbretro.babyregistry.data.model.EventType
 import com.kbretro.babyregistry.domain.summarize
 import com.kbretro.babyregistry.ui.common.BabyEditDialog
 import com.kbretro.babyregistry.ui.common.EventDetailDialog
+import com.kbretro.babyregistry.ui.common.Fmt
+import com.kbretro.babyregistry.ui.common.SectionTitle
+import com.kbretro.babyregistry.ui.common.rememberNotificationPermissionRequest
+import com.kbretro.babyregistry.ui.common.rememberNow
 import com.kbretro.babyregistry.ui.entry.EntryDefaults
 import com.kbretro.babyregistry.ui.entry.EntryRequest
 import com.kbretro.babyregistry.ui.entry.EntrySheet
-import com.kbretro.babyregistry.ui.common.Fmt
-import com.kbretro.babyregistry.ui.common.SectionTitle
-import com.kbretro.babyregistry.ui.common.rememberNow
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,7 +57,9 @@ fun HomeScreen(onSeeAll: () -> Unit, viewModel: HomeViewModel = hiltViewModel())
     val now = rememberNow()
     var entry by remember { mutableStateOf<EntryRequest?>(null) }
     var detail by remember { mutableStateOf<EventEntity?>(null) }
-    var editingBaby by remember { mutableStateOf(false) }
+    var switcher by remember { mutableStateOf(false) }
+    var editingBaby by remember { mutableStateOf<BabyEntity?>(null) }
+    val requestNotifications = rememberNotificationPermissionRequest()
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     fun notify(message: String) {
@@ -68,7 +73,7 @@ fun HomeScreen(onSeeAll: () -> Unit, viewModel: HomeViewModel = hiltViewModel())
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
-                navigationIcon = { BabyAvatar(baby.name, onClick = { editingBaby = true }) },
+                navigationIcon = { BabyAvatar(baby.name, onClick = { switcher = true }) },
                 title = {
                     Column {
                         Text(baby.name, style = MaterialTheme.typography.titleLarge)
@@ -123,6 +128,7 @@ fun HomeScreen(onSeeAll: () -> Unit, viewModel: HomeViewModel = hiltViewModel())
                 }
             }
             item(key = "since") { SinceRow(state, now) }
+            item(key = "predictions") { PredictionsCard(state, now) }
             item(key = "today") {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     SectionTitle("Hoy")
@@ -145,8 +151,14 @@ fun HomeScreen(onSeeAll: () -> Unit, viewModel: HomeViewModel = hiltViewModel())
         EntrySheet(
             request = request,
             defaults = EntryDefaults(suggestedSide = state.suggestedSide, lastBottle = state.lastBottle),
-            onStartBreast = viewModel::startBreast,
-            onStartSleep = viewModel::startSleep,
+            onStartBreast = { side ->
+                requestNotifications()
+                viewModel.startBreast(side)
+            },
+            onStartSleep = {
+                requestNotifications()
+                viewModel.startSleep()
+            },
             onDone = ::notify,
             onDismiss = { entry = null },
         )
@@ -167,14 +179,42 @@ fun HomeScreen(onSeeAll: () -> Unit, viewModel: HomeViewModel = hiltViewModel())
             },
         )
     }
-    if (editingBaby) {
+    if (switcher) {
+        BabySwitcherSheet(
+            babies = state.babies,
+            selectedId = baby.id,
+            onSelect = {
+                viewModel.selectBaby(it.id)
+                switcher = false
+            },
+            onEdit = {
+                switcher = false
+                editingBaby = it
+            },
+            onAdd = {
+                switcher = false
+                editingBaby = BabyEntity(name = "", birthDate = LocalDate.now())
+            },
+            onDismiss = { switcher = false },
+        )
+    }
+    editingBaby?.let { editing ->
         BabyEditDialog(
-            baby = baby,
-            onDismiss = { editingBaby = false },
+            baby = editing,
+            onDismiss = { editingBaby = null },
             onSave = {
-                viewModel.updateBaby(it)
-                editingBaby = false
-                notify("Perfil actualizado")
+                viewModel.saveBaby(it)
+                editingBaby = null
+                notify(if (editing.id == 0L) "Bebé añadido" else "Perfil actualizado")
+            },
+            onDelete = if (editing.id != 0L && state.babies.size > 1) {
+                {
+                    viewModel.deleteBaby(editing)
+                    editingBaby = null
+                    notify("Bebé eliminado")
+                }
+            } else {
+                null
             },
         )
     }

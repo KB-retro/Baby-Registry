@@ -16,8 +16,19 @@ android {
         applicationId = "com.kbretro.babyregistry"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 3
+        versionName = "0.3.0"
+    }
+
+    signingConfigs {
+        // Clave de depuración fija para que cada APK de CI pueda instalarse encima del anterior
+        // (y para registrar su SHA-1 en Firebase). No usar para publicar en Play Store.
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
@@ -79,6 +90,10 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
+
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)

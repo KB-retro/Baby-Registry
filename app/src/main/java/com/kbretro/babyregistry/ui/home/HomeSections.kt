@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.BabyChangingStation
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.LocalDrink
@@ -21,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -30,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import com.kbretro.babyregistry.data.model.EventEntity
 import com.kbretro.babyregistry.data.model.EventType
 import com.kbretro.babyregistry.domain.DaySummary
+import com.kbretro.babyregistry.domain.Prediction
+import com.kbretro.babyregistry.domain.Predictions
 import com.kbretro.babyregistry.ui.common.EventRow
 import com.kbretro.babyregistry.ui.common.Fmt
 import com.kbretro.babyregistry.ui.common.style
@@ -228,5 +232,43 @@ fun RecentList(events: List<EventEntity>, now: Long, onClick: (EventEntity) -> U
                 }
             }
         }
+    }
+}
+
+/** "Próximamente": estimación de la próxima toma y del próximo sueño según los últimos días. */
+@Composable
+fun PredictionsCard(state: HomeUiState, now: Long) {
+    val feed = remember(state.window) { Predictions.nextFeed(state.window, System.currentTimeMillis()) }
+    val sleep = remember(state.window) { Predictions.nextSleep(state.window, System.currentTimeMillis()) }
+    if (feed == null && sleep == null) return
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.size(8.dp))
+                Text("Próximamente", style = MaterialTheme.typography.titleSmall)
+            }
+            feed?.let { PredictionLine("Próxima toma", it, now, EventType.BOTTLE.style().color) }
+            sleep?.let { PredictionLine("Próximo sueño", it, now, EventType.SLEEP.style().color) }
+            Text(
+                "Estimación según los patrones de los últimos 3 días.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PredictionLine(label: String, prediction: Prediction, now: Long, color: Color) {
+    val diff = prediction.at - now
+    val relative = when {
+        diff > 60_000 -> "en ${Fmt.duration(diff)}"
+        diff < -60_000 -> "hace ${Fmt.duration(-diff)}"
+        else -> "ahora"
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = color, modifier = Modifier.weight(1f))
+        Text("~${Fmt.time(prediction.at)} ($relative)", style = MaterialTheme.typography.bodyMedium)
     }
 }

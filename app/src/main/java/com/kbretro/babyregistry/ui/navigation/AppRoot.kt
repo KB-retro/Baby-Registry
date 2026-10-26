@@ -29,6 +29,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.kbretro.babyregistry.data.repository.TrackerRepository
+import com.kbretro.babyregistry.ui.data.DataScreen
 import com.kbretro.babyregistry.ui.growth.GrowthScreen
 import com.kbretro.babyregistry.ui.health.HealthScreen
 import com.kbretro.babyregistry.ui.history.HistoryScreen
@@ -41,6 +42,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
+
+private const val DATA_ROUTE = "data"
 
 enum class RootState { LOADING, NEEDS_ONBOARDING, READY }
 
@@ -95,12 +98,16 @@ private fun MainScaffold() {
             modifier = Modifier.padding(bottom = padding.calculateBottomPadding()),
         ) {
             composable(Tab.HOME.route) {
-                HomeScreen(onSeeAll = { navController.navigateToTab(Tab.HISTORY.route) })
+                HomeScreen(
+                    onSeeAll = { navController.navigateToTab(Tab.HISTORY.route) },
+                    onOpenData = { navController.navigate(DATA_ROUTE) },
+                )
             }
             composable(Tab.HISTORY.route) { HistoryScreen() }
             composable(Tab.STATS.route) { StatsScreen() }
             composable(Tab.GROWTH.route) { GrowthScreen() }
             composable(Tab.HEALTH.route) { HealthScreen() }
+            composable(DATA_ROUTE) { DataScreen(onBack = { navController.popBackStack() }) }
         }
     }
 }

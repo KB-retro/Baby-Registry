@@ -65,6 +65,8 @@ class TrackerRepository @Inject constructor(
 
     suspend fun insert(event: EventEntity): Long = eventDao.insert(event)
 
+    suspend fun insertAll(events: List<EventEntity>) = eventDao.insertAll(events)
+
     suspend fun update(event: EventEntity) = eventDao.update(event)
 
     suspend fun delete(event: EventEntity) = eventDao.delete(event)

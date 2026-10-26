@@ -10,7 +10,7 @@ import com.kbretro.babyregistry.data.model.GrowthEntity
 
 @Database(
     entities = [BabyEntity::class, EventEntity::class, GrowthEntity::class, AppointmentEntity::class],
-    version = 2,
+    version = 3,
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {

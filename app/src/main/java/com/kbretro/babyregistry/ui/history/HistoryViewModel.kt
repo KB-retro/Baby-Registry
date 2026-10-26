@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -23,6 +24,8 @@ import javax.inject.Inject
 data class HistoryUiState(
     val filter: EventType? = null,
     val days: Map<LocalDate, List<EventEntity>> = emptyMap(),
+    /** Tipos que se ofrecen como filtro (los visibles del bebé). */
+    val types: List<EventType> = EventType.entries,
     val loaded: Boolean = false,
 )
 
@@ -36,12 +39,13 @@ class HistoryViewModel @Inject constructor(
     private val filter = MutableStateFlow<EventType?>(null)
 
     private val events = repo.currentBaby.flatMapLatest { baby ->
-        if (baby == null) flowOf(emptyList()) else repo.all(baby.id)
+        if (baby == null) flowOf(null to emptyList()) else repo.all(baby.id).map { baby to it }
     }
 
-    val state: StateFlow<HistoryUiState> = combine(events, filter) { all, type ->
+    val state: StateFlow<HistoryUiState> = combine(events, filter) { (baby, all), type ->
         HistoryUiState(
             filter = type,
+            types = EventType.entries.filter { baby?.isVisible(it) ?: true },
             days = all.filter { type == null || it.type == type }.groupBy { Fmt.localDate(it.startTime) },
             loaded = true,
         )

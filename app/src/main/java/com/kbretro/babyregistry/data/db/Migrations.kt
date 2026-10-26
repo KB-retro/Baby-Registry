@@ -26,3 +26,11 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_appointments_babyId` ON `appointments` (`babyId`)")
     }
 }
+
+/** v2 → v3: tipo de lactancia y registros ocultos por bebé. */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `babies` ADD COLUMN `feedingType` TEXT")
+        db.execSQL("ALTER TABLE `babies` ADD COLUMN `hiddenTypes` TEXT")
+    }
+}

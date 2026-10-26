@@ -8,6 +8,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.kbretro.babyregistry.data.model.AppointmentEntity
 import com.kbretro.babyregistry.data.model.AppointmentKind
 import com.kbretro.babyregistry.data.model.EventType
+import com.kbretro.babyregistry.data.model.FeedingType
 import com.kbretro.babyregistry.data.model.GrowthEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -20,7 +21,7 @@ import org.robolectric.annotation.Config
 import java.time.LocalDate
 
 /**
- * Crea una base de datos con el esquema v1 (fase 1), la migra a v2 y comprueba que Room
+ * Crea una base de datos con el esquema v1 (fase 1), la migra a la versión actual y comprueba que Room
  * acepta el esquema resultante y que los datos se conservan.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -43,7 +44,7 @@ class MigrationTest {
     )
 
     @Test
-    fun `migrar de v1 a v2 conserva los datos`() {
+    fun `migrar de v1 a la version actual conserva los datos`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val name = "migration-test.db"
         context.deleteDatabase(name)
@@ -60,7 +61,7 @@ class MigrationTest {
         }
 
         val room = Room.databaseBuilder(context, AppDatabase::class.java, name)
-            .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .allowMainThreadQueries()
             .build()
         // Abrir la base de datos ejecuta la migración y la validación del esquema de Room.
@@ -69,6 +70,10 @@ class MigrationTest {
         runBlocking {
             val baby = room.babyDao().observeFirst().first()
             assertEquals("Leo", baby?.name)
+            assertNull(baby?.feedingType)
+            assertEquals(emptySet<EventType>(), baby?.hidden)
+            room.babyDao().update(baby!!.copy(feedingType = FeedingType.FORMULA).withHidden(setOf(EventType.BREAST)))
+            assertEquals(setOf(EventType.BREAST), room.babyDao().observeFirst().first()?.hidden)
 
             val event = room.eventDao().observeAll(1).first().single()
             assertEquals(EventType.BOTTLE, event.type)

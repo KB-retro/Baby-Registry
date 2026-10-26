@@ -21,6 +21,11 @@ Hecha en **Kotlin + Jetpack Compose** (Material 3), funciona sin conexión.
 - **Widget** de pantalla de inicio: última toma, último pañal y estado de sueño, con botones de dormir/despertar y pañal.
 - **Predicciones** de la próxima toma y del próximo sueño según los últimos 3 días.
 - **Informe PDF** para el pediatra (desde Gráficas): medias, tabla día a día, crecimiento con percentiles, salud y próximas citas.
+- **Tipo de lactancia** (materna, artificial o mixta) que oculta automáticamente los registros que no aplican, y **ocultar cualquier tipo de registro** que no uses (en el perfil del bebé).
+- **Importar y exportar** (icono de flechas en Inicio):
+  - Copia completa en **JSON** para cambiar de móvil o guardar una copia, y restaurarla sin duplicar.
+  - Informe **PDF** para el pediatra.
+  - Importar datos de **otras apps** en JSON, CSV, PDF o texto, con resumen previo de lo reconocido.
 - Colores dinámicos (Material You) y modo oscuro.
 
 ## Arquitectura
@@ -32,7 +37,7 @@ Hecha en **Kotlin + Jetpack Compose** (Material 3), funciona sin conexión.
 
 ```
 app/src/main/java/com/kbretro/babyregistry/
-├── data/        # Room: entidades, DAOs, migraciones, repositorio, temporizador
+├── data/        # Room, repositorio, temporizador e importación/exportación (transfer/)
 ├── di/          # Módulos de Hilt
 ├── domain/      # Cálculos: resumen del día, estadísticas, curvas OMS, predicciones
 ├── export/      # Informe PDF
@@ -64,3 +69,10 @@ desde la pestaña **Actions → (ejecución) → Artifacts**.
 Las tablas LMS de `domain/WhoTables.kt` se generan a partir de los
 [Patrones de Crecimiento Infantil de la OMS](https://www.who.int/tools/child-growth-standards)
 (vía el paquete `pygrowup`, licencia BSD). Son orientativas y no sustituyen el criterio del pediatra.
+
+## Firma
+
+`app/debug.keystore` es una clave de **depuración** con la contraseña estándar de Android (`android`).
+Se guarda en el repositorio a propósito para que todos los APK de CI tengan la misma firma y se puedan
+actualizar sin desinstalar. No es un secreto y no sirve para publicar: para Google Play se usará una
+clave de subida aparte, guardada en los *secrets* de GitHub.

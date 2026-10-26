@@ -20,6 +20,7 @@ import javax.inject.Inject
 
 data class HealthUiState(
     val babyId: Long? = null,
+    val hidden: Set<EventType> = emptySet(),
     val temperatures: List<EventEntity> = emptyList(),
     val medicines: List<EventEntity> = emptyList(),
     val appointments: List<AppointmentEntity> = emptyList(),
@@ -39,7 +40,7 @@ class HealthViewModel @Inject constructor(
                 repo.byTypes(baby.id, listOf(EventType.TEMPERATURE)),
                 repo.byTypes(baby.id, listOf(EventType.MEDICINE)),
                 repo.appointments(baby.id),
-            ) { temps, meds, appointments -> HealthUiState(baby.id, temps, meds, appointments) }
+            ) { temps, meds, appointments -> HealthUiState(baby.id, baby.hidden, temps, meds, appointments) }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HealthUiState())
 

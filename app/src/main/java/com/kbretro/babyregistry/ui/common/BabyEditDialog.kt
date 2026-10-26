@@ -2,9 +2,16 @@ package com.kbretro.babyregistry.ui.common
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -18,8 +25,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import com.kbretro.babyregistry.data.model.BabyEntity
+import com.kbretro.babyregistry.data.model.EventType
+import com.kbretro.babyregistry.data.model.FeedingType
 import com.kbretro.babyregistry.data.model.Sex
 
+val FeedingType.label: String
+    get() = when (this) {
+        FeedingType.BREAST -> "Materna"
+        FeedingType.FORMULA -> "Artificial"
+        FeedingType.MIXED -> "Mixta"
+    }
+
+/** Al cambiar el tipo de lactancia se quitan las ocultaciones automáticas del anterior y se aplican las del nuevo. */
+fun applyFeedingType(hidden: Set<EventType>, previous: FeedingType?, next: FeedingType?): Set<EventType> =
+    hidden - previous?.autoHidden.orEmpty() + next?.autoHidden.orEmpty()
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun BabyEditDialog(
     baby: BabyEntity,
@@ -28,14 +49,19 @@ fun BabyEditDialog(
     onDelete: (() -> Unit)? = null,
 ) {
     var name by remember { mutableStateOf(baby.name) }
-    var confirmDelete by remember { mutableStateOf(false) }
     var birthDate by remember { mutableStateOf(baby.birthDate) }
     var sex by remember { mutableStateOf(baby.sex) }
+    var feeding by remember { mutableStateOf(baby.feedingType) }
+    var hidden by remember { mutableStateOf(baby.hidden) }
+    var confirmDelete by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (baby.id == 0L) "Nuevo bebé" else "Perfil del bebé") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -47,6 +73,48 @@ fun BabyEditDialog(
                 DateField("Nacimiento", birthDate, { birthDate = it })
                 Text("Sexo", style = MaterialTheme.typography.labelLarge)
                 ChoiceRow(Sex.entries.map { it to it.label }, sex, { sex = it })
+
+                Text("Lactancia", style = MaterialTheme.typography.labelLarge)
+                ChoiceRow(
+                    FeedingType.entries.map { it to it.label },
+                    feeding,
+                    { next ->
+                        // Tocar la opción ya elegida la desmarca.
+                        val value = if (next == feeding) null else next
+                        hidden = applyFeedingType(hidden, feeding, value)
+                        feeding = value
+                    },
+                )
+                Text(
+                    when (feeding) {
+                        FeedingType.BREAST -> "Se oculta el biberón. Puedes volver a mostrarlo abajo."
+                        FeedingType.FORMULA -> "Se oculta la toma de pecho. Puedes volver a mostrarla abajo."
+                        else -> "Al elegir el tipo se ocultan los registros que no uses."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                Text("Registros visibles", style = MaterialTheme.typography.labelLarge)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    EventType.entries.forEach { type ->
+                        val style = type.style()
+                        FilterChip(
+                            selected = type !in hidden,
+                            onClick = { hidden = if (type in hidden) hidden - type else hidden + type },
+                            label = { Text(style.label) },
+                            leadingIcon = {
+                                Icon(style.icon, contentDescription = null, tint = style.color, modifier = Modifier.size(18.dp))
+                            },
+                        )
+                    }
+                }
+                Text(
+                    "Los registros ocultos no aparecen en los accesos rápidos. Lo ya guardado no se borra.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
                 if (onDelete != null) {
                     TextButton(onClick = { if (confirmDelete) onDelete() else confirmDelete = true }) {
                         Text(
@@ -59,7 +127,12 @@ fun BabyEditDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onSave(baby.copy(name = name.trim(), birthDate = birthDate, sex = sex)) },
+                onClick = {
+                    onSave(
+                        baby.copy(name = name.trim(), birthDate = birthDate, sex = sex, feedingType = feeding)
+                            .withHidden(hidden),
+                    )
+                },
                 enabled = name.isNotBlank(),
             ) { Text("Guardar") }
         },

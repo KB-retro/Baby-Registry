@@ -4,11 +4,13 @@ import com.kbretro.babyregistry.data.db.AppointmentDao
 import com.kbretro.babyregistry.data.db.BabyDao
 import com.kbretro.babyregistry.data.db.EventDao
 import com.kbretro.babyregistry.data.db.GrowthDao
+import com.kbretro.babyregistry.data.db.MilestoneDao
 import com.kbretro.babyregistry.data.model.AppointmentEntity
 import com.kbretro.babyregistry.data.model.BabyEntity
 import com.kbretro.babyregistry.data.model.EventEntity
 import com.kbretro.babyregistry.data.model.EventType
 import com.kbretro.babyregistry.data.model.GrowthEntity
+import com.kbretro.babyregistry.data.model.MilestoneEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -22,6 +24,7 @@ class TrackerRepository @Inject constructor(
     private val eventDao: EventDao,
     private val growthDao: GrowthDao,
     private val appointmentDao: AppointmentDao,
+    private val milestoneDao: MilestoneDao,
     private val selectedBaby: SelectedBabyStore,
 ) {
     val babies: Flow<List<BabyEntity>> = babyDao.observeAll()
@@ -82,6 +85,16 @@ class TrackerRepository @Inject constructor(
     }
 
     suspend fun deleteGrowth(entry: GrowthEntity) = growthDao.delete(entry)
+
+    // Hitos
+
+    fun milestones(babyId: Long): Flow<List<MilestoneEntity>> = milestoneDao.observeAll(babyId)
+
+    suspend fun saveMilestone(milestone: MilestoneEntity) {
+        if (milestone.id == 0L) milestoneDao.insert(milestone) else milestoneDao.update(milestone)
+    }
+
+    suspend fun deleteMilestone(milestone: MilestoneEntity) = milestoneDao.delete(milestone)
 
     // Citas
 

@@ -9,6 +9,8 @@ import com.kbretro.babyregistry.data.model.EventEntity
 import com.kbretro.babyregistry.data.model.EventType
 import com.kbretro.babyregistry.data.model.FeedingType
 import com.kbretro.babyregistry.data.model.GrowthEntity
+import com.kbretro.babyregistry.data.model.MilestoneEntity
+import com.kbretro.babyregistry.data.model.MilestoneKind
 import com.kbretro.babyregistry.data.model.Sex
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -41,6 +43,7 @@ class BackupJsonTest {
             ),
             growth = listOf(GrowthEntity(id = 1, babyId = 7, date = LocalDate.of(2026, 6, 1), weightKg = 5.1)),
             appointments = listOf(AppointmentEntity(id = 2, babyId = 7, time = 5000, kind = AppointmentKind.VACCINE, title = "2 meses", reminderAt = 4000)),
+            milestones = listOf(MilestoneEntity(id = 5, babyId = 7, time = 6000, kind = MilestoneKind.SURGERY, detail = "Sindactilia", notes = "Todo bien")),
         )
 
         val content = TextExtractor.json(BackupJson.write(listOf(backup), exportedAt = 9000))
@@ -52,6 +55,7 @@ class BackupJsonTest {
         assertEquals(backup.events.map { it.copy(id = 0, babyId = 0) }, read.events)
         assertEquals(backup.growth.map { it.copy(id = 0, babyId = 0) }, read.growth)
         assertEquals(backup.appointments.map { it.copy(id = 0, babyId = 0) }, read.appointments)
+        assertEquals(backup.milestones.map { it.copy(id = 0, babyId = 0) }, read.milestones)
     }
 
     @Test

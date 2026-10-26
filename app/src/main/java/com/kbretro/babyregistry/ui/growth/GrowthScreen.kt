@@ -33,13 +33,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -54,6 +57,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kbretro.babyregistry.data.model.BabyEntity
 import com.kbretro.babyregistry.data.model.GrowthEntity
+import com.kbretro.babyregistry.data.model.MilestoneEntity
 import com.kbretro.babyregistry.data.model.Sex
 import com.kbretro.babyregistry.domain.GrowthIndicator
 import com.kbretro.babyregistry.domain.WhoGrowth
@@ -81,15 +85,27 @@ fun GrowthScreen(viewModel: GrowthViewModel = hiltViewModel()) {
     var indicator by rememberSaveable { mutableStateOf(GrowthIndicator.WEIGHT) }
     var editing by remember { mutableStateOf<GrowthEntity?>(null) }
     var adding by remember { mutableStateOf(false) }
+    var tab by rememberSaveable { mutableIntStateOf(0) }
+    var editingMilestone by remember { mutableStateOf<MilestoneEntity?>(null) }
+    var addingMilestone by remember { mutableStateOf(false) }
+    val showMilestones = tab == 1
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        topBar = { TopAppBar(title = { Text("Crecimiento") }) },
+        topBar = {
+            Column {
+                TopAppBar(title = { Text("Crecimiento") })
+                PrimaryTabRow(selectedTabIndex = tab) {
+                    Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Medidas") })
+                    Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Hitos") })
+                }
+            }
+        },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { adding = true },
+                onClick = { if (showMilestones) addingMilestone = true else adding = true },
                 icon = { Icon(Icons.Rounded.Add, contentDescription = null) },
-                text = { Text("Añadir medida") },
+                text = { Text(if (showMilestones) "Añadir hito" else "Añadir medida") },
             )
         },
     ) { padding ->
@@ -103,6 +119,15 @@ fun GrowthScreen(viewModel: GrowthViewModel = hiltViewModel()) {
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            if (showMilestones) {
+                if (state.milestones.isEmpty()) {
+                    item(key = "milestones-empty") { MilestonesEmpty() }
+                }
+                items(state.milestones, key = { "m${it.id}" }) { milestone ->
+                    MilestoneCard(baby, milestone, onClick = { editingMilestone = milestone })
+                }
+                return@LazyColumn
+            }
             item(key = "indicator") {
                 ChoiceRow(GrowthIndicator.entries.map { it to it.shortLabel }, indicator, { indicator = it })
             }
@@ -146,6 +171,20 @@ fun GrowthScreen(viewModel: GrowthViewModel = hiltViewModel()) {
                 )
             }
         }
+    }
+
+    if (addingMilestone || editingMilestone != null) {
+        MilestoneSheet(
+            babyId = baby.id,
+            birthDate = baby.birthDate,
+            initial = editingMilestone,
+            onSave = { viewModel.saveMilestone(it) },
+            onDelete = { viewModel.deleteMilestone(it) },
+            onDismiss = {
+                addingMilestone = false
+                editingMilestone = null
+            },
+        )
     }
 
     if (adding || editing != null) {

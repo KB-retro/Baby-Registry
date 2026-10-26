@@ -15,6 +15,7 @@ Hecha en **Kotlin + Jetpack Compose** (Material 3), funciona sin conexión.
 - **Editar** cualquier registro terminado y el perfil del bebé (toca su inicial en Inicio).
 - **Gráficas** de 7, 14 o 30 días: tomas, ml de biberón, sueño, pañales (pis/caca) y patrón de sueño y tomas de 24 h, con medias diarias.
 - **Crecimiento**: peso, talla y perímetro craneal sobre las curvas de percentiles de la OMS (P3–P97, 0-5 años) con el percentil de cada medida.
+- **Hitos** (en Crecimiento → Hitos): cordón umbilical, primera sonrisa, primer diente, primera palabra (¿cuál?), primeros pasos, operaciones (¿cuál?: frenectomía, sindactilia…) y otros, en una línea de tiempo con la edad del bebé.
 - **Salud**: temperatura (con aviso de fiebre), medicación con recordatorio de la próxima dosis y citas/vacunas con notificación.
 - **Varios bebés** (gemelos, hermanos): toca la inicial en Inicio para cambiar, editar o añadir.
 - **Notificación con cronómetro** mientras hay una toma o un sueño en marcha, con botones para cambiar de lado, pausar o terminar.

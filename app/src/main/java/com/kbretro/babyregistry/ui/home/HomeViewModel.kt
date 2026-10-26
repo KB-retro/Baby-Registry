@@ -1,5 +1,6 @@
 package com.kbretro.babyregistry.ui.home
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kbretro.babyregistry.data.model.BabyEntity
@@ -7,11 +8,13 @@ import com.kbretro.babyregistry.data.model.BreastSide
 import com.kbretro.babyregistry.data.model.BreastTimer
 import com.kbretro.babyregistry.data.model.EventEntity
 import com.kbretro.babyregistry.data.model.EventType
+import com.kbretro.babyregistry.data.photos.PhotoFiles
 import com.kbretro.babyregistry.data.repository.TrackerRepository
 import com.kbretro.babyregistry.domain.DayRange
 import com.kbretro.babyregistry.domain.Predictions
 import com.kbretro.babyregistry.reminders.Reminders
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -61,6 +64,7 @@ private data class Latest(
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val repo: TrackerRepository,
     private val reminders: Reminders,
 ) : ViewModel() {
@@ -153,7 +157,9 @@ class HomeViewModel @Inject constructor(
         val now = now()
         repo.pendingEventReminders(now).filter { it.babyId == baby.id }.forEach { reminders.cancelEvent(it.id) }
         repo.pendingAppointmentReminders(now).filter { it.babyId == baby.id }.forEach { reminders.cancelAppointment(it.id) }
+        val photos = listOf(baby.photoPath) + repo.milestones(baby.id).first().map { it.photoPath }
         repo.deleteBaby(baby)
+        photos.forEach { PhotoFiles.delete(context, it) }
         repo.babies.first().firstOrNull { it.id != baby.id }?.let { repo.selectBaby(it.id) }
     }
 

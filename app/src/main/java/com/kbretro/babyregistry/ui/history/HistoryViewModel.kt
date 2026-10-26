@@ -8,6 +8,7 @@ import com.kbretro.babyregistry.data.repository.TrackerRepository
 import com.kbretro.babyregistry.reminders.Reminders
 import com.kbretro.babyregistry.ui.common.Fmt
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -49,7 +51,8 @@ class HistoryViewModel @Inject constructor(
             days = all.filter { type == null || it.type == type }.groupBy { Fmt.localDate(it.startTime) },
             loaded = true,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUiState())
+    }.flowOn(Dispatchers.Default) // Agrupar miles de registros fuera del hilo principal.
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUiState())
 
     fun setFilter(type: EventType?) {
         filter.value = type

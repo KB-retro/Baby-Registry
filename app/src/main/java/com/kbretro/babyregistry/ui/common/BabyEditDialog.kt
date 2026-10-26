@@ -21,13 +21,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import com.kbretro.babyregistry.data.model.BabyEntity
 import com.kbretro.babyregistry.data.model.EventType
 import com.kbretro.babyregistry.data.model.FeedingType
 import com.kbretro.babyregistry.data.model.Sex
+import com.kbretro.babyregistry.data.photos.PhotoFiles
 
 val FeedingType.label: String
     get() = when (this) {
@@ -53,15 +56,39 @@ fun BabyEditDialog(
     var sex by remember { mutableStateOf(baby.sex) }
     var feeding by remember { mutableStateOf(baby.feedingType) }
     var hidden by remember { mutableStateOf(baby.hidden) }
+    var photo by remember { mutableStateOf(baby.photoPath) }
     var confirmDelete by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    // Las fotos elegidas y no guardadas se borran para no dejar archivos huérfanos.
+    fun discardUnsavedPhoto() {
+        if (photo != baby.photoPath) PhotoFiles.delete(context, photo)
+    }
+    val cancel = {
+        discardUnsavedPhoto()
+        onDismiss()
+    }
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = cancel,
         title = { Text(if (baby.id == 0L) "Nuevo bebé" else "Perfil del bebé") },
         text = {
             Column(
                 Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    PhotoPickerAvatar(name.ifBlank { "?" }, photo, 96.dp) { picked ->
+                        discardUnsavedPhoto()
+                        photo = picked
+                    }
+                    if (photo != null) {
+                        TextButton(onClick = {
+                            discardUnsavedPhoto()
+                            photo = null
+                        }) { Text("Quitar foto") }
+                    } else {
+                        Text("Toca para añadir una foto", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -116,7 +143,14 @@ fun BabyEditDialog(
                 )
 
                 if (onDelete != null) {
-                    TextButton(onClick = { if (confirmDelete) onDelete() else confirmDelete = true }) {
+                    TextButton(onClick = {
+                        if (confirmDelete) {
+                            discardUnsavedPhoto()
+                            onDelete()
+                        } else {
+                            confirmDelete = true
+                        }
+                    }) {
                         Text(
                             if (confirmDelete) "Se borrarán todos sus registros. ¿Seguro?" else "Eliminar bebé",
                             color = MaterialTheme.colorScheme.error,
@@ -128,14 +162,15 @@ fun BabyEditDialog(
         confirmButton = {
             TextButton(
                 onClick = {
+                    if (photo != baby.photoPath) PhotoFiles.delete(context, baby.photoPath)
                     onSave(
-                        baby.copy(name = name.trim(), birthDate = birthDate, sex = sex, feedingType = feeding)
+                        baby.copy(name = name.trim(), birthDate = birthDate, sex = sex, feedingType = feeding, photoPath = photo)
                             .withHidden(hidden),
                     )
                 },
                 enabled = name.isNotBlank(),
             ) { Text("Guardar") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
+        dismissButton = { TextButton(onClick = cancel) { Text("Cancelar") } },
     )
 }

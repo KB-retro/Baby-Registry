@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import java.util.UUID
 
 /** Un hito: tipo, cuándo ocurrió y, si aplica, cuál (la palabra, la operación…). */
 @Entity(
@@ -16,7 +17,7 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index("babyId")],
+    indices = [Index("babyId"), Index(value = ["uuid"], unique = true)],
 )
 data class MilestoneEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -25,4 +26,9 @@ data class MilestoneEntity(
     val kind: MilestoneKind,
     val detail: String? = null,
     val notes: String? = null,
+    val photoPath: String? = null,
+    /** Identificador global para sincronizar entre móviles (los id locales cambian en cada uno). */
+    val uuid: String = UUID.randomUUID().toString(),
+    /** Última modificación: en un conflicto entre móviles gana la más reciente. */
+    val updatedAt: Long = System.currentTimeMillis(),
 )

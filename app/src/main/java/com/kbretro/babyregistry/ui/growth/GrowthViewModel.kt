@@ -1,12 +1,15 @@
 package com.kbretro.babyregistry.ui.growth
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kbretro.babyregistry.data.model.BabyEntity
 import com.kbretro.babyregistry.data.model.GrowthEntity
 import com.kbretro.babyregistry.data.model.MilestoneEntity
+import com.kbretro.babyregistry.data.photos.PhotoFiles
 import com.kbretro.babyregistry.data.repository.TrackerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +31,7 @@ data class GrowthUiState(
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class GrowthViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val repo: TrackerRepository,
 ) : ViewModel() {
 
@@ -49,5 +53,8 @@ class GrowthViewModel @Inject constructor(
 
     fun saveMilestone(milestone: MilestoneEntity) = viewModelScope.launch { repo.saveMilestone(milestone) }
 
-    fun deleteMilestone(milestone: MilestoneEntity) = viewModelScope.launch { repo.deleteMilestone(milestone) }
+    fun deleteMilestone(milestone: MilestoneEntity) = viewModelScope.launch {
+        repo.deleteMilestone(milestone)
+        PhotoFiles.delete(context, milestone.photoPath)
+    }
 }

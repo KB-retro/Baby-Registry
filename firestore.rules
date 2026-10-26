@@ -1,0 +1,37 @@
+rules_version = '2';
+
+// Reglas para la sincronización entre cuidadores (ver docs/SINCRONIZACION.md).
+// Solo los miembros de una familia pueden leer y escribir sus datos.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isMember(familyId) {
+      return signedIn() &&
+        request.auth.uid in get(/databases/$(database)/documents/families/$(familyId)).data.members;
+    }
+
+    match /families/{familyId} {
+      // Quien crea la familia debe incluirse como miembro.
+      allow create: if signedIn() && request.auth.uid in request.resource.data.members;
+      allow read, update: if isMember(familyId);
+      // Unirse con el código: solo se puede añadir a uno mismo a la lista de miembros.
+      allow update: if signedIn()
+        && request.resource.data.members.hasAll(resource.data.members)
+        && request.resource.data.members.removeAll(resource.data.members).hasOnly([request.auth.uid])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members']);
+
+      match /{collection}/{docId} {
+        allow read, write: if isMember(familyId);
+      }
+    }
+
+    match /invites/{code} {
+      allow read: if signedIn();
+      allow create: if signedIn() && isMember(request.resource.data.familyId);
+    }
+  }
+}

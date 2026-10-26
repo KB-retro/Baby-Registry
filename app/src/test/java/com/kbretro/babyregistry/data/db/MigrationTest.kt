@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -63,7 +64,7 @@ class MigrationTest {
         }
 
         val room = Room.databaseBuilder(context, AppDatabase::class.java, name)
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
             .allowMainThreadQueries()
             .build()
         // Abrir la base de datos ejecuta la migración y la validación del esquema de Room.
@@ -78,6 +79,9 @@ class MigrationTest {
             assertEquals(setOf(EventType.BREAST), room.babyDao().observeFirst().first()?.hidden)
 
             val event = room.eventDao().observeAll(1).first().single()
+            // La migración a v6 asigna un uuid y una fecha de modificación a los registros existentes.
+            assertEquals(32, event.uuid.length)
+            assertTrue(event.updatedAt > 0)
             assertEquals(EventType.BOTTLE, event.type)
             assertEquals(120, event.amountMl)
             assertNull(event.temperatureC)
@@ -94,6 +98,8 @@ class MigrationTest {
                 MilestoneEntity(babyId = 1, time = 6000, kind = MilestoneKind.FIRST_WORD, detail = "Mamá"),
             )
             assertEquals("Mamá", room.milestoneDao().observeAll(1).first().single().detail)
+            assertNull(room.babyDao().observeFirst().first()?.photoPath)
+            assertNull(room.milestoneDao().observeAll(1).first().single().photoPath)
         }
         room.close()
     }

@@ -23,6 +23,8 @@ Hecha en **Kotlin + Jetpack Compose** (Material 3), funciona sin conexión.
 - **Predicciones** de la próxima toma y del próximo sueño según los últimos 3 días.
 - **Informe PDF** para el pediatra (desde Gráficas): medias, tabla día a día, crecimiento con percentiles, salud y próximas citas.
 - **Tipo de lactancia** (materna, artificial o mixta) que oculta automáticamente los registros que no aplican, y **ocultar cualquier tipo de registro** que no uses (en el perfil del bebé).
+- **Fotos** del bebé (en lugar de la inicial) y de los hitos.
+- **Copia en Google Drive**: copia diaria automática a un archivo de tu Drive (elegido una vez desde el selector del sistema) y copia de seguridad de Android incluida.
 - **Importar y exportar** (icono de flechas en Inicio):
   - Copia completa en **JSON** para cambiar de móvil o guardar una copia, y restaurarla sin duplicar.
   - Informe **PDF** para el pediatra.
@@ -63,7 +65,7 @@ desde la pestaña **Actions → (ejecución) → Artifacts**.
 
 - ~~**Fase 2**: gráficas, crecimiento con percentiles OMS, salud y edición de registros.~~ ✅
 - ~~**Fase 3**: widgets, notificación con temporizador, predicciones, varios bebés, exportar PDF.~~ ✅
-- **Sincronización entre cuidadores** (Firebase): pendiente de crear el proyecto de Firebase.
+- **Sincronización entre cuidadores**: la base local ya está preparada (uuid, fechas de modificación, registro de borrados y fusión probada). Falta conectar Firebase; ver [docs/SINCRONIZACION.md](docs/SINCRONIZACION.md).
 
 ## Datos de crecimiento
 

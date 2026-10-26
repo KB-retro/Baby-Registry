@@ -47,7 +47,7 @@ import java.time.LocalDate
 @Composable
 fun HistoryScreen(viewModel: HistoryViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val now = rememberNow()
+    val now = rememberNow(60_000L)
     var detail by remember { mutableStateOf<EventEntity?>(null) }
     var editing by remember { mutableStateOf<EventEntity?>(null) }
 

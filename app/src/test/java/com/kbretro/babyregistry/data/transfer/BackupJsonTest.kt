@@ -50,12 +50,21 @@ class BackupJsonTest {
         assertTrue(content is FileContent.Backup)
         val read = (content as FileContent.Backup).babies.single()
 
-        // Los identificadores no se guardan: se comparan los datos.
-        assertEquals(baby.copy(id = 0, createdAt = read.baby.createdAt), read.baby)
-        assertEquals(backup.events.map { it.copy(id = 0, babyId = 0) }, read.events)
-        assertEquals(backup.growth.map { it.copy(id = 0, babyId = 0) }, read.growth)
-        assertEquals(backup.appointments.map { it.copy(id = 0, babyId = 0) }, read.appointments)
-        assertEquals(backup.milestones.map { it.copy(id = 0, babyId = 0) }, read.milestones)
+        // Los identificadores no se guardan (al restaurar se crean nuevos): se comparan los datos.
+        assertEquals(
+            baby.copy(id = 0, createdAt = 0, uuid = "", updatedAt = 0),
+            read.baby.copy(createdAt = 0, uuid = "", updatedAt = 0),
+        )
+        assertEquals(backup.events.map { it.copy(id = 0, babyId = 0, uuid = "", updatedAt = 0) }, read.events.map { it.copy(uuid = "", updatedAt = 0) })
+        assertEquals(backup.growth.map { it.copy(id = 0, babyId = 0, uuid = "", updatedAt = 0) }, read.growth.map { it.copy(uuid = "", updatedAt = 0) })
+        assertEquals(
+            backup.appointments.map { it.copy(id = 0, babyId = 0, uuid = "", updatedAt = 0) },
+            read.appointments.map { it.copy(uuid = "", updatedAt = 0) },
+        )
+        assertEquals(
+            backup.milestones.map { it.copy(id = 0, babyId = 0, uuid = "", updatedAt = 0) },
+            read.milestones.map { it.copy(uuid = "", updatedAt = 0) },
+        )
     }
 
     @Test

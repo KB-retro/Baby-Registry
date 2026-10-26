@@ -1,5 +1,10 @@
 package com.kbretro.babyregistry.ui.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -96,6 +101,10 @@ private fun MainScaffold() {
             navController = navController,
             startDestination = Tab.HOME.route,
             modifier = Modifier.padding(bottom = padding.calculateBottomPadding()),
+            enterTransition = { fadeIn(tween(220)) + scaleIn(tween(220), initialScale = 0.98f) },
+            exitTransition = { fadeOut(tween(150)) },
+            popEnterTransition = { fadeIn(tween(220)) },
+            popExitTransition = { fadeOut(tween(150)) + scaleOut(tween(150), targetScale = 0.98f) },
         ) {
             composable(Tab.HOME.route) {
                 HomeScreen(

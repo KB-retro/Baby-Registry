@@ -19,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.CloudUpload
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FileUpload
@@ -56,6 +57,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kbretro.babyregistry.data.transfer.ImportPreview
 import com.kbretro.babyregistry.ui.common.ChoiceRow
 import com.kbretro.babyregistry.ui.common.EventIcon
+import com.kbretro.babyregistry.ui.common.Fmt
 import com.kbretro.babyregistry.ui.common.style
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -64,6 +66,7 @@ import java.time.LocalDate
 @Composable
 fun DataScreen(onBack: () -> Unit, viewModel: DataViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val drive by viewModel.drive.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
@@ -72,6 +75,9 @@ fun DataScreen(onBack: () -> Unit, viewModel: DataViewModel = hiltViewModel()) {
 
     val createJson = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         uri?.let(viewModel::exportBackup)
+    }
+    val chooseDriveFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        uri?.let(viewModel::enableDrive)
     }
     val openFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let(viewModel::analyze)
@@ -103,6 +109,39 @@ fun DataScreen(onBack: () -> Unit, viewModel: DataViewModel = hiltViewModel()) {
         ) {
             if (state.busy || sharingPdf) {
                 item(key = "progress") { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+            }
+            item(key = "drive-title") { Text("Copia en Google Drive", style = MaterialTheme.typography.titleMedium) }
+            item(key = "drive") {
+                ActionCard(
+                    icon = Icons.Rounded.CloudUpload,
+                    title = if (drive.enabled) "Copia diaria activada" else "Copia automática diaria",
+                    text = if (drive.enabled) {
+                        drive.lastError ?: drive.lastBackupAt?.let { "Última copia: ${Fmt.dayTime(it)} ✓" } ?: "Preparando la primera copia…"
+                    } else {
+                        "Elige dónde guardarla: en la ventana que se abre, toca ☰ y selecciona Google Drive. " +
+                            "La app actualizará ese archivo cada día (con fotos incluidas). " +
+                            "Para recuperarla en otro móvil: Importar → elige ese archivo."
+                    },
+                ) {
+                    if (drive.enabled) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(onClick = viewModel::driveBackupNow, enabled = !state.busy) { Text("Copiar ahora") }
+                            OutlinedButton(onClick = viewModel::disableDrive, enabled = !state.busy) { Text("Desactivar") }
+                        }
+                    } else {
+                        Button(onClick = { chooseDriveFile.launch("baby-registry-copia.json") }, enabled = !state.busy) {
+                            Text("Elegir ubicación en Drive")
+                        }
+                    }
+                }
+            }
+            item(key = "android-backup") {
+                Text(
+                    "Además, la copia de seguridad de Android (Ajustes → Google → Copia de seguridad) guarda los datos y las fotos " +
+                        "de la app en tu cuenta de Google y los restaura al instalarla en un móvil nuevo.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             item(key = "export-title") { Text("Exportar", style = MaterialTheme.typography.titleMedium) }
             item(key = "export-json") {

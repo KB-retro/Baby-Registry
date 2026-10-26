@@ -23,7 +23,8 @@ class EntryViewModel @Inject constructor(
             val id = repo.insert(event)
             reminders.sync(event.copy(id = id))
         } else {
-            val updated = event.copy(id = initial.id)
+            // Al editar se conserva la identidad del registro (necesaria para sincronizar).
+            val updated = event.copy(id = initial.id, uuid = initial.uuid)
             repo.update(updated)
             reminders.sync(updated)
         }

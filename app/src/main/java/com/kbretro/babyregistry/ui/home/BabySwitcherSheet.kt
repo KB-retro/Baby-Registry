@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.kbretro.babyregistry.data.model.BabyEntity
+import com.kbretro.babyregistry.ui.common.BabyAvatar
 import com.kbretro.babyregistry.ui.common.Fmt
 
 /** Lista de bebés para cambiar entre ellos, editarlos o añadir uno nuevo. */
@@ -51,7 +52,7 @@ fun BabySwitcherSheet(
                 ListItem(
                     modifier = Modifier.clickable { onSelect(baby) },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    leadingContent = { Initial(baby.name) },
+                    leadingContent = { BabyAvatar(baby.name, baby.photoPath, 44.dp) },
                     headlineContent = { Text(baby.name) },
                     supportingContent = { Text(Fmt.age(baby.birthDate)) },
                     trailingContent = {
@@ -73,19 +74,6 @@ fun BabySwitcherSheet(
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 leadingContent = { Icon(Icons.Rounded.Add, contentDescription = null) },
                 headlineContent = { Text("Añadir bebé") },
-            )
-        }
-    }
-}
-
-@Composable
-private fun Initial(name: String) {
-    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(40.dp)) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                name.firstOrNull()?.uppercase() ?: "?",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
         }
     }

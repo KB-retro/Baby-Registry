@@ -5,12 +5,14 @@ import com.kbretro.babyregistry.data.db.BabyDao
 import com.kbretro.babyregistry.data.db.EventDao
 import com.kbretro.babyregistry.data.db.GrowthDao
 import com.kbretro.babyregistry.data.db.MilestoneDao
+import com.kbretro.babyregistry.data.db.SyncDao
 import com.kbretro.babyregistry.data.model.AppointmentEntity
 import com.kbretro.babyregistry.data.model.BabyEntity
 import com.kbretro.babyregistry.data.model.EventEntity
 import com.kbretro.babyregistry.data.model.EventType
 import com.kbretro.babyregistry.data.model.GrowthEntity
 import com.kbretro.babyregistry.data.model.MilestoneEntity
+import com.kbretro.babyregistry.data.model.SyncDeletionEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -25,8 +27,16 @@ class TrackerRepository @Inject constructor(
     private val growthDao: GrowthDao,
     private val appointmentDao: AppointmentDao,
     private val milestoneDao: MilestoneDao,
+    private val syncDao: SyncDao,
     private val selectedBaby: SelectedBabyStore,
 ) {
+    // Toda modificación local actualiza `updatedAt` y todo borrado queda registrado, para que la
+    // sincronización entre móviles sepa qué ha cambiado.
+    private fun now() = System.currentTimeMillis()
+
+    private suspend fun logDeletion(entity: String, uuid: String) =
+        syncDao.logDeletion(SyncDeletionEntity(entity = entity, uuid = uuid))
+
     val babies: Flow<List<BabyEntity>> = babyDao.observeAll()
 
     /** Bebé seleccionado; si no hay selección válida, el primero. */
@@ -38,9 +48,12 @@ class TrackerRepository @Inject constructor(
 
     suspend fun addBaby(baby: BabyEntity): Long = babyDao.insert(baby).also { selectedBaby.select(it) }
 
-    suspend fun updateBaby(baby: BabyEntity) = babyDao.update(baby)
+    suspend fun updateBaby(baby: BabyEntity) = babyDao.update(baby.copy(updatedAt = now()))
 
-    suspend fun deleteBaby(baby: BabyEntity) = babyDao.delete(baby)
+    suspend fun deleteBaby(baby: BabyEntity) {
+        babyDao.delete(baby)
+        logDeletion("baby", baby.uuid)
+    }
 
     suspend fun selectBaby(id: Long) = selectedBaby.select(id)
 
@@ -70,9 +83,12 @@ class TrackerRepository @Inject constructor(
 
     suspend fun insertAll(events: List<EventEntity>) = eventDao.insertAll(events)
 
-    suspend fun update(event: EventEntity) = eventDao.update(event)
+    suspend fun update(event: EventEntity) = eventDao.update(event.copy(updatedAt = now()))
 
-    suspend fun delete(event: EventEntity) = eventDao.delete(event)
+    suspend fun delete(event: EventEntity) {
+        eventDao.delete(event)
+        logDeletion("event", event.uuid)
+    }
 
     suspend fun pendingEventReminders(now: Long): List<EventEntity> = eventDao.pendingReminders(now)
 
@@ -81,20 +97,26 @@ class TrackerRepository @Inject constructor(
     fun growth(babyId: Long): Flow<List<GrowthEntity>> = growthDao.observeAll(babyId)
 
     suspend fun saveGrowth(entry: GrowthEntity) {
-        if (entry.id == 0L) growthDao.insert(entry) else growthDao.update(entry)
+        if (entry.id == 0L) growthDao.insert(entry) else growthDao.update(entry.copy(updatedAt = now()))
     }
 
-    suspend fun deleteGrowth(entry: GrowthEntity) = growthDao.delete(entry)
+    suspend fun deleteGrowth(entry: GrowthEntity) {
+        growthDao.delete(entry)
+        logDeletion("growth", entry.uuid)
+    }
 
     // Hitos
 
     fun milestones(babyId: Long): Flow<List<MilestoneEntity>> = milestoneDao.observeAll(babyId)
 
     suspend fun saveMilestone(milestone: MilestoneEntity) {
-        if (milestone.id == 0L) milestoneDao.insert(milestone) else milestoneDao.update(milestone)
+        if (milestone.id == 0L) milestoneDao.insert(milestone) else milestoneDao.update(milestone.copy(updatedAt = now()))
     }
 
-    suspend fun deleteMilestone(milestone: MilestoneEntity) = milestoneDao.delete(milestone)
+    suspend fun deleteMilestone(milestone: MilestoneEntity) {
+        milestoneDao.delete(milestone)
+        logDeletion("milestone", milestone.uuid)
+    }
 
     // Citas
 
@@ -104,9 +126,12 @@ class TrackerRepository @Inject constructor(
 
     suspend fun insertAppointment(appointment: AppointmentEntity): Long = appointmentDao.insert(appointment)
 
-    suspend fun updateAppointment(appointment: AppointmentEntity) = appointmentDao.update(appointment)
+    suspend fun updateAppointment(appointment: AppointmentEntity) = appointmentDao.update(appointment.copy(updatedAt = now()))
 
-    suspend fun deleteAppointment(appointment: AppointmentEntity) = appointmentDao.delete(appointment)
+    suspend fun deleteAppointment(appointment: AppointmentEntity) {
+        appointmentDao.delete(appointment)
+        logDeletion("appointment", appointment.uuid)
+    }
 
     suspend fun pendingAppointmentReminders(now: Long): List<AppointmentEntity> =
         appointmentDao.pendingReminders(now)

@@ -3,13 +3,17 @@ package com.kbretro.babyregistry.ui.data
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kbretro.babyregistry.data.backup.DriveBackup
+import com.kbretro.babyregistry.data.backup.DriveBackupState
 import com.kbretro.babyregistry.data.transfer.DataTransfer
 import com.kbretro.babyregistry.data.transfer.ImportPreview
 import com.kbretro.babyregistry.export.ReportExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -24,7 +28,25 @@ data class DataUiState(
 class DataViewModel @Inject constructor(
     private val transfer: DataTransfer,
     private val exporter: ReportExporter,
+    private val driveBackup: DriveBackup,
 ) : ViewModel() {
+
+    val drive: StateFlow<DriveBackupState> =
+        driveBackup.state.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DriveBackupState())
+
+    fun enableDrive(uri: Uri) = run {
+        driveBackup.enable(uri)
+        "Copia automática activada"
+    }
+
+    fun driveBackupNow() = run {
+        if (driveBackup.backupNow()) "Copia guardada en Drive" else "No se pudo guardar la copia"
+    }
+
+    fun disableDrive() = run {
+        driveBackup.disable()
+        "Copia automática desactivada"
+    }
 
     private val _state = MutableStateFlow(DataUiState())
     val state: StateFlow<DataUiState> = _state.asStateFlow()

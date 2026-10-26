@@ -45,6 +45,7 @@ import com.kbretro.babyregistry.ui.common.label
 import com.kbretro.babyregistry.ui.common.rememberNotificationPermissionRequest
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.util.UUID
 
 private const val HOUR = 3_600_000L
 
@@ -141,6 +142,7 @@ fun AppointmentSheet(
                     onSave(
                         AppointmentEntity(
                             id = initial?.id ?: 0,
+                            uuid = initial?.uuid ?: UUID.randomUUID().toString(),
                             babyId = babyId,
                             time = time,
                             kind = kind,

@@ -20,10 +20,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AddAPhoto
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -42,17 +44,23 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kbretro.babyregistry.data.model.BabyEntity
 import com.kbretro.babyregistry.data.model.MilestoneEntity
 import com.kbretro.babyregistry.data.model.MilestoneKind
+import com.kbretro.babyregistry.data.photos.PhotoFiles
 import com.kbretro.babyregistry.ui.common.ClockField
 import com.kbretro.babyregistry.ui.common.DateField
 import com.kbretro.babyregistry.ui.common.Fmt
+import com.kbretro.babyregistry.ui.common.PhotoImage
+import com.kbretro.babyregistry.ui.common.rememberPhotoPicker
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.util.UUID
 
 @Composable
 fun MilestoneEmoji(kind: MilestoneKind, size: Int = 44) {
@@ -74,7 +82,16 @@ fun MilestoneCard(baby: BabyEntity, milestone: MilestoneEntity, onClick: () -> U
         Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.large,
     ) {
+        if (milestone.photoPath != null) {
+            PhotoImage(
+                milestone.photoPath,
+                Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+            )
+        }
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             MilestoneEmoji(milestone.kind)
             Spacer(Modifier.width(16.dp))
@@ -120,8 +137,22 @@ fun MilestoneSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var photo by remember { mutableStateOf(initial?.photoPath) }
+    // Una foto elegida que no se llega a guardar se borra.
+    fun discardUnsavedPhoto() {
+        if (photo != initial?.photoPath) PhotoFiles.delete(context, photo)
+    }
+    val pickPhoto = rememberPhotoPicker { picked ->
+        discardUnsavedPhoto()
+        photo = picked
+    }
     fun close() {
         scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
+    }
+    fun cancel() {
+        discardUnsavedPhoto()
+        onDismiss()
     }
     val initialTime = initial?.time ?: System.currentTimeMillis()
     var kind by remember { mutableStateOf(initial?.kind) }
@@ -135,7 +166,7 @@ fun MilestoneSheet(
     val style = kind?.style
     val valid = kind != null && (style?.detailRequired != true || detail.isNotBlank()) && !date.isBefore(birthDate)
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+    ModalBottomSheet(onDismissRequest = ::cancel, sheetState = sheetState) {
         Column(
             Modifier
                 .fillMaxWidth()
@@ -181,6 +212,31 @@ fun MilestoneSheet(
                 }
             }
 
+            if (photo != null) {
+                Box {
+                    PhotoImage(
+                        photo,
+                        Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                            .clip(MaterialTheme.shapes.large),
+                    )
+                    Row(Modifier.align(Alignment.BottomEnd).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilledTonalButton(onClick = pickPhoto) { Text("Cambiar") }
+                        FilledTonalButton(onClick = {
+                            discardUnsavedPhoto()
+                            photo = null
+                        }) { Text("Quitar") }
+                    }
+                }
+            } else {
+                OutlinedButton(onClick = pickPhoto, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Rounded.AddAPhoto, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Añadir foto")
+                }
+            }
+
             DateField("Día", date, { date = it })
             ClockField("Hora", Fmt.at(date, hour, minute), { h, m ->
                 hour = h
@@ -206,13 +262,16 @@ fun MilestoneSheet(
                     onSave(
                         MilestoneEntity(
                             id = initial?.id ?: 0,
+                            uuid = initial?.uuid ?: UUID.randomUUID().toString(),
                             babyId = babyId,
                             time = Fmt.at(date, hour, minute),
                             kind = selected,
                             detail = detail.trim().ifEmpty { null }?.takeIf { selected.style.detailLabel != null },
                             notes = notes.trim().ifEmpty { null },
+                            photoPath = photo,
                         ),
                     )
+                    if (photo != initial?.photoPath) PhotoFiles.delete(context, initial?.photoPath)
                     close()
                 },
                 enabled = valid,
@@ -228,6 +287,7 @@ fun MilestoneSheet(
                 OutlinedButton(
                     onClick = {
                         if (confirmDelete) {
+                            discardUnsavedPhoto()
                             onDelete(initial)
                             close()
                         } else {

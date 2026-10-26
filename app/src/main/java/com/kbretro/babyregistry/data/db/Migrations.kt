@@ -46,3 +46,31 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_milestones_babyId` ON `milestones` (`babyId`)")
     }
 }
+
+/** v4 → v5: fotos del bebé y de los hitos. */
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `babies` ADD COLUMN `photoPath` TEXT")
+        db.execSQL("ALTER TABLE `milestones` ADD COLUMN `photoPath` TEXT")
+    }
+}
+
+/**
+ * v5 → v6: preparación para sincronizar entre varios móviles. Cada registro recibe un identificador
+ * global (uuid) y una fecha de modificación, y se añade el registro de borrados.
+ */
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        listOf("babies", "events", "growth", "appointments", "milestones").forEach { table ->
+            db.execSQL("ALTER TABLE `$table` ADD COLUMN `uuid` TEXT NOT NULL DEFAULT ''")
+            db.execSQL("UPDATE `$table` SET `uuid` = lower(hex(randomblob(16)))")
+            db.execSQL("ALTER TABLE `$table` ADD COLUMN `updatedAt` INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("UPDATE `$table` SET `updatedAt` = CAST(strftime('%s', 'now') AS INTEGER) * 1000")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_${table}_uuid` ON `$table` (`uuid`)")
+        }
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `sync_deletions` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`entity` TEXT NOT NULL, `uuid` TEXT NOT NULL, `deletedAt` INTEGER NOT NULL)",
+        )
+    }
+}

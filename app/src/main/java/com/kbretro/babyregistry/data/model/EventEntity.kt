@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import java.util.UUID
 
 /**
  * Un registro del bebé. Todas las horas son epoch millis.
@@ -21,7 +22,7 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index("babyId"), Index("startTime")],
+    indices = [Index("babyId"), Index("startTime"), Index(value = ["uuid"], unique = true)],
 )
 data class EventEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -52,6 +53,10 @@ data class EventEntity(
     /** Momento del recordatorio programado (p. ej. próxima dosis), si lo hay. */
     val reminderAt: Long? = null,
     val notes: String? = null,
+    /** Identificador global para sincronizar entre móviles (los id locales cambian en cada uno). */
+    val uuid: String = UUID.randomUUID().toString(),
+    /** Última modificación: en un conflicto entre móviles gana la más reciente. */
+    val updatedAt: Long = System.currentTimeMillis(),
 ) {
     val isOngoing: Boolean get() = endTime == null
 }

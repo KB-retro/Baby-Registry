@@ -1,6 +1,13 @@
 package com.kbretro.babyregistry.ui.home
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +27,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.ImportExport
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,11 +43,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -47,6 +57,7 @@ import com.kbretro.babyregistry.data.model.BabyEntity
 import com.kbretro.babyregistry.data.model.EventEntity
 import com.kbretro.babyregistry.data.model.EventType
 import com.kbretro.babyregistry.domain.summarize
+import com.kbretro.babyregistry.ui.common.BabyAvatar
 import com.kbretro.babyregistry.ui.common.BabyEditDialog
 import com.kbretro.babyregistry.ui.common.EventDetailDialog
 import com.kbretro.babyregistry.ui.common.Fmt
@@ -70,6 +81,7 @@ fun HomeScreen(onSeeAll: () -> Unit, onOpenData: () -> Unit, viewModel: HomeView
     var detail by remember { mutableStateOf<EventEntity?>(null) }
     var switcher by remember { mutableStateOf(false) }
     var editingBaby by remember { mutableStateOf<BabyEntity?>(null) }
+    var recentExpanded by rememberSaveable { mutableStateOf(false) }
     val requestNotifications = rememberNotificationPermissionRequest()
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -146,11 +158,32 @@ fun HomeScreen(onSeeAll: () -> Unit, onOpenData: () -> Unit, viewModel: HomeView
             }
             item(key = "recent", contentType = "section") {
                 Column(Modifier.animateItem().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        SectionTitle("Actividad reciente", Modifier.weight(1f))
+                    val rotation by animateFloatAsState(if (recentExpanded) 180f else 0f, label = "chevron")
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(MaterialTheme.shapes.medium)
+                            .clickable { recentExpanded = !recentExpanded }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        SectionTitle("Actividad reciente")
+                        Spacer(Modifier.width(4.dp))
+                        Icon(
+                            Icons.Rounded.ExpandMore,
+                            contentDescription = if (recentExpanded) "Ocultar" else "Mostrar",
+                            modifier = Modifier.graphicsLayer { rotationZ = rotation },
+                        )
+                        Spacer(Modifier.weight(1f))
                         TextButton(onClick = onSeeAll) { Text("Ver todo") }
                     }
-                    RecentTimeline(state.recent, now, onClick = { detail = it })
+                    AnimatedVisibility(
+                        visible = recentExpanded,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut(),
+                    ) {
+                        RecentTimeline(state.recent, now, onClick = { detail = it })
+                    }
                 }
             }
         }
@@ -258,21 +291,7 @@ private fun HeroHeader(
     ) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    onClick = onAvatar,
-                    shape = CircleShape,
-                    color = colors.surface,
-                    shadowElevation = 2.dp,
-                    modifier = Modifier.size(56.dp),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            baby.name.firstOrNull()?.uppercase() ?: "?",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = colors.primary,
-                        )
-                    }
-                }
+                BabyAvatar(baby.name, baby.photoPath, 64.dp, onClick = onAvatar)
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     Text(baby.name, style = MaterialTheme.typography.headlineSmall, color = colors.onPrimaryContainer)

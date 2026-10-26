@@ -7,12 +7,14 @@ import com.kbretro.babyregistry.data.model.AppointmentEntity
 import com.kbretro.babyregistry.data.model.EventEntity
 import com.kbretro.babyregistry.data.model.GrowthEntity
 import com.kbretro.babyregistry.data.model.MilestoneEntity
+import com.kbretro.babyregistry.data.photos.PhotoFiles
 import com.kbretro.babyregistry.data.repository.TrackerRepository
 import com.kbretro.babyregistry.reminders.Reminders
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import java.util.Base64
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -58,7 +60,9 @@ class DataTransfer @Inject constructor(
                 milestones = repo.milestones(baby.id).first(),
             )
         }
-        val json = BackupJson.write(babies, System.currentTimeMillis())
+        val json = BackupJson.write(babies, System.currentTimeMillis()) { name ->
+            PhotoFiles.readBytes(context, name)?.let { Base64.getEncoder().encodeToString(it) }
+        }
         context.contentResolver.openOutputStream(uri, "wt")?.use { it.write(json.toByteArray()) }
             ?: error("No se pudo escribir el archivo")
         babies.sumOf { it.events.size }
@@ -103,8 +107,9 @@ class DataTransfer @Inject constructor(
             val match = existingBabies.firstOrNull {
                 it.name.equals(backup.baby.name, ignoreCase = true) && it.birthDate == backup.baby.birthDate
             }
-            val babyId = match?.id ?: repo.addBaby(backup.baby)
-            val outcome = addAll(babyId, backup.events, backup.growth, backup.appointments, backup.milestones)
+            val babyId = match?.id ?: repo.addBaby(backup.baby.copy(photoPath = restorePhoto(backup.babyPhoto)))
+            val milestones = backup.milestones.mapIndexed { i, m -> m.copy(photoPath = restorePhoto(backup.milestonePhotos[i])) }
+            val outcome = addAll(babyId, backup.events, backup.growth, backup.appointments, milestones)
             added += outcome.added
             duplicates += outcome.duplicates
         }
@@ -132,11 +137,16 @@ class DataTransfer @Inject constructor(
         val milestoneKeys = repo.milestones(babyId).first().map { Triple(it.time, it.kind, it.detail) }.toSet()
         val newMilestones = milestones.filter { Triple(it.time, it.kind, it.detail) !in milestoneKeys }
         newMilestones.forEach { repo.saveMilestone(it.copy(id = 0, babyId = babyId)) }
+        // Las fotos restauradas de hitos que ya existían no se usan: se borran.
+        (milestones - newMilestones.toSet()).forEach { PhotoFiles.delete(context, it.photoPath) }
 
         val added = eventOutcome.added + newGrowth.size + newAppointments.size + newMilestones.size
         val total = events.size + growth.size + appointments.size + milestones.size
         return ImportOutcome(added = added, duplicates = total - added)
     }
+
+    private suspend fun restorePhoto(base64: String?): String? =
+        base64?.let { runCatching { PhotoFiles.saveBytes(context, Base64.getDecoder().decode(it)) }.getOrNull() }
 
     private suspend fun addEvents(babyId: Long, events: List<EventEntity>): ImportOutcome {
         val existing = repo.all(babyId).first().map { it.importKey() }.toSet()

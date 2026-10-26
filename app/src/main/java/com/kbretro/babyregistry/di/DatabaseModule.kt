@@ -10,6 +10,9 @@ import com.kbretro.babyregistry.data.db.GrowthDao
 import com.kbretro.babyregistry.data.db.MIGRATION_1_2
 import com.kbretro.babyregistry.data.db.MIGRATION_2_3
 import com.kbretro.babyregistry.data.db.MIGRATION_3_4
+import com.kbretro.babyregistry.data.db.MIGRATION_4_5
+import com.kbretro.babyregistry.data.db.MIGRATION_5_6
+import com.kbretro.babyregistry.data.db.SyncDao
 import com.kbretro.babyregistry.data.db.MilestoneDao
 import dagger.Module
 import dagger.Provides
@@ -26,7 +29,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "baby-registry.db")
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
             .build()
 
     @Provides
@@ -43,4 +46,7 @@ object DatabaseModule {
 
     @Provides
     fun provideMilestoneDao(db: AppDatabase): MilestoneDao = db.milestoneDao()
+
+    @Provides
+    fun provideSyncDao(db: AppDatabase): SyncDao = db.syncDao()
 }

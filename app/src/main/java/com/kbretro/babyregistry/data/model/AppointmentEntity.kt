@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import java.util.UUID
 
 /** Cita médica, vacuna u otro evento futuro con recordatorio opcional. */
 @Entity(
@@ -16,7 +17,7 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index("babyId")],
+    indices = [Index("babyId"), Index(value = ["uuid"], unique = true)],
 )
 data class AppointmentEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -27,4 +28,8 @@ data class AppointmentEntity(
     val notes: String? = null,
     val reminderAt: Long? = null,
     val done: Boolean = false,
+    /** Identificador global para sincronizar entre móviles (los id locales cambian en cada uno). */
+    val uuid: String = UUID.randomUUID().toString(),
+    /** Última modificación: en un conflicto entre móviles gana la más reciente. */
+    val updatedAt: Long = System.currentTimeMillis(),
 )

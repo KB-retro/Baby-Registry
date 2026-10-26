@@ -8,6 +8,7 @@ import com.kbretro.babyregistry.data.model.BabyEntity
 import com.kbretro.babyregistry.data.model.EventEntity
 import com.kbretro.babyregistry.data.model.GrowthEntity
 import com.kbretro.babyregistry.data.model.MilestoneEntity
+import com.kbretro.babyregistry.data.model.SyncDeletionEntity
 
 @Database(
     entities = [
@@ -16,8 +17,9 @@ import com.kbretro.babyregistry.data.model.MilestoneEntity
         GrowthEntity::class,
         AppointmentEntity::class,
         MilestoneEntity::class,
+        SyncDeletionEntity::class,
     ],
-    version = 4,
+    version = 6,
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -26,4 +28,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun growthDao(): GrowthDao
     abstract fun appointmentDao(): AppointmentDao
     abstract fun milestoneDao(): MilestoneDao
+    abstract fun syncDao(): SyncDao
 }

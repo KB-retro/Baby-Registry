@@ -25,6 +25,9 @@ data class BabyBackup(
     val growth: List<GrowthEntity>,
     val appointments: List<AppointmentEntity>,
     val milestones: List<MilestoneEntity> = emptyList(),
+    /** Fotos en Base64 leídas de una copia: la del bebé y las de los hitos (por posición en la lista). */
+    val babyPhoto: String? = null,
+    val milestonePhotos: Map<Int, String> = emptyMap(),
 )
 
 /**
@@ -37,11 +40,12 @@ object BackupJson {
 
     fun isBackup(root: JSONObject): Boolean = root.optString("app") == APP
 
-    fun write(babies: List<BabyBackup>, exportedAt: Long): String = JSONObject()
+    /** [photo] devuelve la foto en Base64 a partir de su nombre de archivo (o null si no existe). */
+    fun write(babies: List<BabyBackup>, exportedAt: Long, photo: (String) -> String? = { null }): String = JSONObject()
         .put("app", APP)
         .put("version", VERSION)
         .put("exportedAt", exportedAt)
-        .put("babies", JSONArray(babies.map(::babyToJson)))
+        .put("babies", JSONArray(babies.map { babyToJson(it, photo) }))
         .toString(2)
 
     fun read(root: JSONObject): List<BabyBackup> {
@@ -49,7 +53,8 @@ object BackupJson {
         return (0 until babies.length()).map { babyFromJson(babies.getJSONObject(it)) }
     }
 
-    private fun babyToJson(b: BabyBackup): JSONObject = JSONObject()
+    private fun babyToJson(b: BabyBackup, photo: (String) -> String?): JSONObject = JSONObject()
+        .putOpt("photo", b.baby.photoPath?.let(photo))
         .put("name", b.baby.name)
         .put("birthDate", b.baby.birthDate.toString())
         .put("sex", b.baby.sex.name)
@@ -58,7 +63,7 @@ object BackupJson {
         .put("events", JSONArray(b.events.map(::eventToJson)))
         .put("growth", JSONArray(b.growth.map(::growthToJson)))
         .put("appointments", JSONArray(b.appointments.map(::appointmentToJson)))
-        .put("milestones", JSONArray(b.milestones.map(::milestoneToJson)))
+        .put("milestones", JSONArray(b.milestones.map { m -> milestoneToJson(m).putOpt("photo", m.photoPath?.let(photo)) }))
 
     private fun babyFromJson(o: JSONObject): BabyBackup {
         val baby = BabyEntity(
@@ -74,6 +79,11 @@ object BackupJson {
             growth = o.optJSONArray("growth").objects().map(::growthFromJson),
             appointments = o.optJSONArray("appointments").objects().mapNotNull(::appointmentFromJson),
             milestones = o.optJSONArray("milestones").objects().mapNotNull(::milestoneFromJson),
+            babyPhoto = o.optStringOrNull("photo"),
+            milestonePhotos = o.optJSONArray("milestones").objects()
+                .filter { milestoneFromJson(it) != null }
+                .mapIndexedNotNull { i, m -> m.optStringOrNull("photo")?.let { i to it } }
+                .toMap(),
         )
     }
 

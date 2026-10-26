@@ -67,6 +67,7 @@ import com.kbretro.babyregistry.ui.common.Fmt
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
+import java.util.UUID
 
 private val MeasurementColor = Color(0xFFE5739D)
 
@@ -326,6 +327,7 @@ private fun GrowthSheet(
                     onSave(
                         GrowthEntity(
                             id = initial?.id ?: 0,
+                            uuid = initial?.uuid ?: UUID.randomUUID().toString(),
                             babyId = babyId,
                             date = date,
                             weightKg = w.takeIf { !weightError },

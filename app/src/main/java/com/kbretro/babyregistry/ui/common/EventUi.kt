@@ -63,7 +63,7 @@ val DiaperKind.label: String
     get() = when (this) {
         DiaperKind.WET -> "Pis"
         DiaperKind.DIRTY -> "Caca"
-        DiaperKind.MIXED -> "Pis y caca"
+        DiaperKind.MIXED -> "Mixto"
     }
 
 val Sex.label: String

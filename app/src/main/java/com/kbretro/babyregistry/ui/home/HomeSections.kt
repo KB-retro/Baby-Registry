@@ -40,6 +40,7 @@ import com.kbretro.babyregistry.ui.common.AnimatedText
 import com.kbretro.babyregistry.ui.common.Fmt
 import com.kbretro.babyregistry.ui.common.PulsingDot
 import com.kbretro.babyregistry.ui.common.detail
+import com.kbretro.babyregistry.ui.common.label
 import com.kbretro.babyregistry.ui.common.pressScale
 import com.kbretro.babyregistry.ui.common.style
 import com.kbretro.babyregistry.ui.common.title
@@ -117,7 +118,7 @@ fun SinceRow(state: HomeUiState, now: Long) {
                 feed.isOngoing -> "Ahora"
                 else -> Fmt.duration(now - feed.startTime)
             },
-            caption = feed?.let { "a las ${Fmt.time(it.startTime)}" } ?: "Sin registros",
+            caption = feed?.let { feedCaption(it) } ?: "Sin registros",
             color = EventType.BOTTLE.style().color,
             modifier = Modifier.weight(1f),
         )
@@ -125,7 +126,7 @@ fun SinceRow(state: HomeUiState, now: Long) {
             emoji = "🧷",
             label = "Último pañal",
             value = diaper?.let { Fmt.duration(now - it.startTime) } ?: "—",
-            caption = diaper?.let { "a las ${Fmt.time(it.startTime)}" } ?: "Sin registros",
+            caption = diaper?.let { d -> listOfNotNull(d.diaperKind?.label, Fmt.time(d.startTime)).joinToString(" · ") } ?: "Sin registros",
             color = EventType.DIAPER.style().color,
             modifier = Modifier.weight(1f),
         )
@@ -151,6 +152,16 @@ fun SinceRow(state: HomeUiState, now: Long) {
             modifier = Modifier.weight(1f),
         )
     }
+}
+
+/** "120 ml · 14:05" para un biberón, "15 min · 14:05" para el pecho. */
+private fun feedCaption(feed: EventEntity): String {
+    val amount = when (feed.type) {
+        EventType.BOTTLE -> feed.amountMl?.let { "$it ml" }
+        EventType.BREAST -> (feed.leftMillis + feed.rightMillis).takeIf { it > 0 }?.let { Fmt.duration(it) }
+        else -> null
+    }
+    return listOfNotNull(amount, Fmt.time(feed.startTime)).joinToString(" · ")
 }
 
 @Composable

@@ -20,9 +20,15 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Compilar y ejecutar tests
-        run: ./gradlew assembleDebug testDebugUnitTest --stacktrace
+        run: ./gradlew assembleDebug assembleRelease testDebugUnitTest --stacktrace
 
-      - name: Subir APK de prueba
+      - name: Subir APK optimizado (el que hay que instalar)
+        uses: actions/upload-artifact@v4
+        with:
+          name: baby-registry-apk
+          path: app/build/outputs/apk/release/*.apk
+
+      - name: Subir APK de depuración
         uses: actions/upload-artifact@v4
         with:
           name: baby-registry-debug-apk

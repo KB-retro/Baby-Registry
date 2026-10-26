@@ -35,6 +35,9 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            // De momento la release se firma con la clave de depuración para poder probarla e instalarla
+            // encima de la debug. Para Google Play se usará una clave de subida guardada en los secrets.
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -72,6 +75,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.profileinstaller)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)

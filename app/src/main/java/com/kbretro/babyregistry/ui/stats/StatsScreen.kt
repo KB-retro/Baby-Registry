@@ -38,14 +38,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kbretro.babyregistry.data.model.EventType
 import com.kbretro.babyregistry.domain.DayStats
 import com.kbretro.babyregistry.domain.averageOf
-import com.kbretro.babyregistry.domain.dailyStats
-import com.kbretro.babyregistry.domain.dayPattern
 import com.kbretro.babyregistry.ui.common.BarChart
 import com.kbretro.babyregistry.ui.common.BarSeries
 import com.kbretro.babyregistry.ui.common.ChoiceRow
 import com.kbretro.babyregistry.ui.common.Fmt
 import com.kbretro.babyregistry.ui.common.SleepPatternChart
-import com.kbretro.babyregistry.ui.common.rememberNow
 import com.kbretro.babyregistry.ui.common.sparseLabels
 import com.kbretro.babyregistry.ui.common.style
 import kotlinx.coroutines.launch
@@ -67,7 +64,6 @@ private val DirtyColor = Color(0xFFC08A2E)
 @Composable
 fun StatsScreen(viewModel: StatsViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val now = rememberNow(60_000L)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var exporting by remember { mutableStateOf(false) }
@@ -86,10 +82,8 @@ fun StatsScreen(viewModel: StatsViewModel = hiltViewModel()) {
             }
         }
     }
-    val stats = remember(state.events, state.days, now) { dailyStats(state.events, state.days, now) }
-    val patterns = remember(state.events, state.days, now) {
-        state.days.takeLast(minOf(state.days.size, 14)).reversed().map { dayPattern(state.events, it, now) }
-    }
+    val stats = state.stats
+    val patterns = state.patterns
     val today = LocalDate.now()
     val labels = state.days.map { Fmt.dayHeader(it, today).let { h -> if (h == "Hoy" || h == "Ayer") h else it.format(longDay) } }
     val axis = sparseLabels(state.days.map { it.format(shortDay).take(5) })

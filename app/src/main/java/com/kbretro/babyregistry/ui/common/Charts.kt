@@ -1,5 +1,8 @@
 package com.kbretro.babyregistry.ui.common
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -17,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -107,6 +111,9 @@ fun BarChart(
     val axisStyle = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
     val gridColor = MaterialTheme.colorScheme.outlineVariant
     val sel = selected.coerceIn(0, n - 1)
+    // Las barras crecen desde abajo al aparecer o al cambiar de periodo.
+    val grow = remember(series) { Animatable(0f) }
+    LaunchedEffect(series) { grow.animateTo(1f, tween(650, easing = FastOutSlowInEasing)) }
 
     Column(modifier) {
         Text(labels[sel], style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -153,7 +160,7 @@ fun BarChart(
                 var base = plotH
                 val nonZero = series.indices.filter { series[it].values[i] > 0f }
                 nonZero.forEachIndexed { k, s ->
-                    val h = series[s].values[i] / maxValue * plotH
+                    val h = series[s].values[i] / maxValue * plotH * grow.value
                     val top = base - h
                     val segmentBottom = if (k == 0) base else base - gap
                     if (segmentBottom > top) {

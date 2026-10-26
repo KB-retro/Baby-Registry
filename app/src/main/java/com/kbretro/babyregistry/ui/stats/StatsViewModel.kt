@@ -5,9 +5,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kbretro.babyregistry.data.model.EventEntity
 import com.kbretro.babyregistry.data.repository.TrackerRepository
+import com.kbretro.babyregistry.domain.DayPattern
 import com.kbretro.babyregistry.domain.DayRange
+import com.kbretro.babyregistry.domain.DayStats
+import com.kbretro.babyregistry.domain.dailyStats
+import com.kbretro.babyregistry.domain.dayPattern
 import com.kbretro.babyregistry.export.ReportExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -16,6 +21,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDate
 import javax.inject.Inject
@@ -24,6 +30,9 @@ data class StatsUiState(
     val rangeDays: Int = 7,
     val days: List<LocalDate> = emptyList(),
     val events: List<EventEntity> = emptyList(),
+    val stats: List<DayStats> = emptyList(),
+    /** Patrón de 24 h de los últimos días (como mucho 14), del más reciente al más antiguo. */
+    val patterns: List<DayPattern> = emptyList(),
     val loaded: Boolean = false,
 )
 
@@ -44,9 +53,19 @@ class StatsViewModel @Inject constructor(
             val from = DayRange.of(dates.first()).first
             val to = DayRange.of(today).second
             repo.overlapping(baby.id, from, to).map { events ->
-                StatsUiState(rangeDays = days, days = dates, events = events, loaded = true)
+                // Los cálculos por día se hacen aquí, en segundo plano, y no al dibujar.
+                val now = System.currentTimeMillis()
+                StatsUiState(
+                    rangeDays = days,
+                    days = dates,
+                    events = events,
+                    stats = dailyStats(events, dates, now),
+                    patterns = dates.takeLast(minOf(dates.size, 14)).reversed().map { dayPattern(events, it, now) },
+                    loaded = true,
+                )
             }
         }
+        .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatsUiState())
 
     fun setRange(days: Int) {

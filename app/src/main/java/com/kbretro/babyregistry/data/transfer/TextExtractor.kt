@@ -11,11 +11,13 @@ import org.json.JSONTokener
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.zip.ZipInputStream
 
 /** Lo que contiene un archivo a importar. */
 sealed interface FileContent {
     data class Backup(val babies: List<BabyBackup>) : FileContent
     data class Records(val records: List<String>) : FileContent
+    data class BabyTracker(val result: BabyTrackerImport.Result) : FileContent
 }
 
 /** Lee JSON, CSV, PDF o texto y lo convierte en una copia propia o en registros de texto. */
@@ -24,16 +26,48 @@ object TextExtractor {
     fun read(context: Context, uri: Uri, mimeType: String?, fileName: String): FileContent {
         val name = fileName.lowercase()
         return when {
+            name.endsWith(".zip") || mimeType in zipTypes -> zip(context, uri)
             name.endsWith(".pdf") || mimeType == "application/pdf" -> FileContent.Records(pdfLines(context, uri))
             name.endsWith(".json") || mimeType == "application/json" -> json(readText(context, uri))
             name.endsWith(".csv") || mimeType == "text/csv" || mimeType == "text/comma-separated-values" ->
-                FileContent.Records(CsvReader.toRecords(readText(context, uri)))
+                csvFiles(listOf(fileName to readText(context, uri)))
             else -> {
                 val text = readText(context, uri)
                 if (text.trimStart().startsWith("{") || text.trimStart().startsWith("[")) json(text)
                 else FileContent.Records(text.lines())
             }
         }
+    }
+
+    private val zipTypes = setOf("application/zip", "application/x-zip-compressed", "application/x-zip")
+
+    /** Un .zip con varios CSV (como la exportación de Baby Tracker) o con JSON/texto. */
+    private fun zip(context: Context, uri: Uri): FileContent {
+        val files = mutableListOf<Pair<String, String>>()
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            ZipInputStream(input).use { zip ->
+                generateSequence { zip.nextEntry }.forEach { entry ->
+                    val entryName = entry.name.substringAfterLast('/')
+                    val supported = entryName.lowercase().let { it.endsWith(".csv") || it.endsWith(".json") || it.endsWith(".txt") }
+                    if (!entry.isDirectory && supported && !entryName.startsWith(".")) {
+                        files += entryName to zip.readBytes().toString(Charsets.UTF_8)
+                    }
+                }
+            }
+        }
+        val json = files.filter { it.first.lowercase().endsWith(".json") }
+        if (json.size == 1 && files.size == 1) return json(json.single().second)
+        return csvFiles(files.filterNot { it.first.lowercase().endsWith(".json") })
+    }
+
+    private fun csvFiles(files: List<Pair<String, String>>): FileContent {
+        val (babyTracker, others) = files.partition { (name, text) -> BabyTrackerImport.matches(name, text) }
+        if (babyTracker.isNotEmpty() && others.isEmpty()) {
+            return FileContent.BabyTracker(BabyTrackerImport.parse(babyTracker))
+        }
+        return FileContent.Records(files.flatMap { (name, text) ->
+            if (name.lowercase().endsWith(".csv")) CsvReader.toRecords(text) else text.lines()
+        })
     }
 
     private fun readText(context: Context, uri: Uri): String =

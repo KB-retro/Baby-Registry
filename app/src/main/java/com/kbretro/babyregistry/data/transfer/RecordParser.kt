@@ -81,7 +81,7 @@ object RecordParser {
             val event = build(type, record, text, startMillis, endMillis)
             if (event == null) unrecognized += record else events += event
         }
-        val unique = events.distinctBy { it.type to it.startTime }.sortedBy { it.startTime }
+        val unique = events.distinctBy { it.importKey() }.sortedBy { it.startTime }
         return Result(unique, unrecognized)
     }
 

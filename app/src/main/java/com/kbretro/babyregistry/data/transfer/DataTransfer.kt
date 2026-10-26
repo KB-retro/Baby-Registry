@@ -3,7 +3,9 @@ package com.kbretro.babyregistry.data.transfer
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import com.kbretro.babyregistry.data.model.AppointmentEntity
 import com.kbretro.babyregistry.data.model.EventEntity
+import com.kbretro.babyregistry.data.model.GrowthEntity
 import com.kbretro.babyregistry.data.repository.TrackerRepository
 import com.kbretro.babyregistry.reminders.Reminders
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -19,6 +21,13 @@ sealed interface ImportPreview {
 
     /** Copia de seguridad propia: se restauran bebés, registros, medidas y citas. */
     data class Backup(override val fileName: String, val babies: List<BabyBackup>) : ImportPreview
+
+    /** Exportación de la app Baby Tracker: registros, medidas y vacunas para el bebé seleccionado. */
+    data class BabyTracker(
+        override val fileName: String,
+        val babyName: String,
+        val result: BabyTrackerImport.Result,
+    ) : ImportPreview
 
     /** Datos de otra app: registros reconocidos para el bebé seleccionado. */
     data class Foreign(
@@ -57,6 +66,7 @@ class DataTransfer @Inject constructor(
         val name = displayName(uri)
         when (val content = TextExtractor.read(context, uri, context.contentResolver.getType(uri), name)) {
             is FileContent.Backup -> ImportPreview.Backup(name, content.babies)
+            is FileContent.BabyTracker -> ImportPreview.BabyTracker(name, repo.currentBaby.first()?.name.orEmpty(), content.result)
             is FileContent.Records -> {
                 val result = RecordParser.parse(content.records)
                 val baby = repo.currentBaby.first()
@@ -73,6 +83,11 @@ class DataTransfer @Inject constructor(
                 val babyId = repo.currentBabyId() ?: return@withContext ImportOutcome(0, 0)
                 addEvents(babyId, preview.events)
             }
+            is ImportPreview.BabyTracker -> {
+                val babyId = repo.currentBabyId() ?: return@withContext ImportOutcome(0, 0)
+                val r = preview.result
+                addAll(babyId, r.events, r.growth, r.appointments)
+            }
         }
         reminders.rescheduleAll()
         outcome
@@ -87,23 +102,38 @@ class DataTransfer @Inject constructor(
                 it.name.equals(backup.baby.name, ignoreCase = true) && it.birthDate == backup.baby.birthDate
             }
             val babyId = match?.id ?: repo.addBaby(backup.baby)
-            val events = addEvents(babyId, backup.events)
-            added += events.added
-            duplicates += events.duplicates
-
-            val dates = repo.growth(babyId).first().map { it.date }.toSet()
-            backup.growth.filter { it.date !in dates }.forEach { repo.saveGrowth(it.copy(id = 0, babyId = babyId)) }
-
-            val keys = repo.appointments(babyId).first().map { it.time to it.title }.toSet()
-            backup.appointments.filter { (it.time to it.title) !in keys }
-                .forEach { repo.insertAppointment(it.copy(id = 0, babyId = babyId)) }
+            val outcome = addAll(babyId, backup.events, backup.growth, backup.appointments)
+            added += outcome.added
+            duplicates += outcome.duplicates
         }
         return ImportOutcome(added, duplicates)
     }
 
+    /** Añade registros, medidas y citas omitiendo los que ya existen. */
+    private suspend fun addAll(
+        babyId: Long,
+        events: List<EventEntity>,
+        growth: List<GrowthEntity>,
+        appointments: List<AppointmentEntity>,
+    ): ImportOutcome {
+        val eventOutcome = addEvents(babyId, events)
+
+        val dates = repo.growth(babyId).first().map { it.date }.toSet()
+        val newGrowth = growth.filter { it.date !in dates }
+        newGrowth.forEach { repo.saveGrowth(it.copy(id = 0, babyId = babyId)) }
+
+        val keys = repo.appointments(babyId).first().map { it.time to it.title }.toSet()
+        val newAppointments = appointments.filter { (it.time to it.title) !in keys }
+        newAppointments.forEach { repo.insertAppointment(it.copy(id = 0, babyId = babyId)) }
+
+        val added = eventOutcome.added + newGrowth.size + newAppointments.size
+        val total = events.size + growth.size + appointments.size
+        return ImportOutcome(added = added, duplicates = total - added)
+    }
+
     private suspend fun addEvents(babyId: Long, events: List<EventEntity>): ImportOutcome {
-        val existing = repo.all(babyId).first().map { it.type to it.startTime }.toSet()
-        val fresh = events.filter { (it.type to it.startTime) !in existing }
+        val existing = repo.all(babyId).first().map { it.importKey() }.toSet()
+        val fresh = events.filter { it.importKey() !in existing }
         repo.insertAll(fresh.map { it.copy(id = 0, babyId = babyId) })
         return ImportOutcome(added = fresh.size, duplicates = events.size - fresh.size)
     }

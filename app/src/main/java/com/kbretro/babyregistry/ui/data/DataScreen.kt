@@ -150,11 +150,11 @@ fun DataScreen(onBack: () -> Unit, viewModel: DataViewModel = hiltViewModel()) {
                 ActionCard(
                     icon = Icons.Rounded.FileUpload,
                     title = "Desde un archivo",
-                    text = "Copias de Baby Registry (.json) o datos exportados de otras apps en JSON, CSV, PDF o texto. " +
+                    text = "Copias de Baby Registry (.json), la exportación de Baby Tracker (.zip o .csv) u otras apps en JSON, CSV, PDF o texto. " +
                         "Verás un resumen antes de importar y no se borra nada.",
                 ) {
                     OutlinedButton(
-                        onClick = { openFile.launch(arrayOf("application/json", "application/pdf", "text/*", "application/octet-stream")) },
+                        onClick = { openFile.launch(arrayOf("application/json", "application/pdf", "application/zip", "application/x-zip-compressed", "text/*", "application/octet-stream")) },
                         enabled = !state.busy,
                     ) { Text("Elegir archivo") }
                 }
@@ -196,6 +196,7 @@ private fun PreviewDialog(preview: ImportPreview, onConfirm: () -> Unit, onDismi
     val canImport = when (preview) {
         is ImportPreview.Backup -> preview.babies.isNotEmpty()
         is ImportPreview.Foreign -> preview.events.isNotEmpty()
+        is ImportPreview.BabyTracker -> preview.result.total > 0
     }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -216,6 +217,31 @@ private fun PreviewDialog(preview: ImportPreview, onConfirm: () -> Unit, onDismi
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                    }
+                    is ImportPreview.BabyTracker -> {
+                        val r = preview.result
+                        Text("Exportación de Baby Tracker", style = MaterialTheme.typography.titleSmall)
+                        val from = r.babyNames.joinToString(", ").ifEmpty { "el bebé del archivo" }
+                        Text("Datos de $from → se añadirán a ${preview.babyName}.")
+                        r.events.groupBy { it.type }.forEach { (type, events) ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                EventIcon(type, size = 28.dp)
+                                Spacer(Modifier.width(8.dp))
+                                Text("${type.style().label}: ${events.size}")
+                            }
+                        }
+                        if (r.growth.isNotEmpty()) Text("Medidas de crecimiento: ${r.growth.size}")
+                        if (r.appointments.isNotEmpty()) Text("Vacunas (como citas hechas): ${r.appointments.size}")
+                        if (r.skipped.isNotEmpty()) {
+                            Text(
+                                "No se importa:",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            r.skipped.forEach { (label, count) ->
+                                Text("• $label: $count", style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
                     }
                     is ImportPreview.Foreign -> {
                         if (preview.events.isEmpty()) {

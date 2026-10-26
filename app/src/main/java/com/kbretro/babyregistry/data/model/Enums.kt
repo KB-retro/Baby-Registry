@@ -34,3 +34,9 @@ enum class FeedingType(val autoHidden: Set<EventType>) {
     FORMULA(setOf(EventType.BREAST)),
     MIXED(emptySet()),
 }
+
+/** Hitos del desarrollo y momentos importantes. */
+enum class MilestoneKind {
+    UMBILICAL_CORD, FIRST_SMILE, FIRST_LAUGH, HOLDS_HEAD, ROLLS_OVER, SITS, CRAWLS,
+    FIRST_TOOTH, FIRST_WORD, FIRST_STEPS, FIRST_FOOD, SURGERY, OTHER,
+}

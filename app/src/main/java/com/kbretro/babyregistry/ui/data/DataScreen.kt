@@ -209,7 +209,8 @@ private fun PreviewDialog(preview: ImportPreview, onConfirm: () -> Unit, onDismi
                         Text("Copia de seguridad de Baby Registry", style = MaterialTheme.typography.titleSmall)
                         preview.babies.forEach { b ->
                             Text(
-                                "• ${b.baby.name}: ${b.events.size} registros, ${b.growth.size} medidas, ${b.appointments.size} citas",
+                                "• ${b.baby.name}: ${b.events.size} registros, ${b.growth.size} medidas, " +
+                                    "${b.appointments.size} citas, ${b.milestones.size} hitos",
                             )
                         }
                         Text(
@@ -232,6 +233,7 @@ private fun PreviewDialog(preview: ImportPreview, onConfirm: () -> Unit, onDismi
                         }
                         if (r.growth.isNotEmpty()) Text("Medidas de crecimiento: ${r.growth.size}")
                         if (r.appointments.isNotEmpty()) Text("Vacunas (como citas hechas): ${r.appointments.size}")
+                        if (r.milestones.isNotEmpty()) Text("Hitos: ${r.milestones.size}")
                         if (r.skipped.isNotEmpty()) {
                             Text(
                                 "No se importa:",

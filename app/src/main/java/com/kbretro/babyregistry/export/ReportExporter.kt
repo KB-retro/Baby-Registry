@@ -12,6 +12,7 @@ import com.kbretro.babyregistry.data.model.BabyEntity
 import com.kbretro.babyregistry.data.model.EventEntity
 import com.kbretro.babyregistry.data.model.EventType
 import com.kbretro.babyregistry.data.model.GrowthEntity
+import com.kbretro.babyregistry.data.model.MilestoneEntity
 import com.kbretro.babyregistry.data.repository.TrackerRepository
 import com.kbretro.babyregistry.domain.DayRange
 import com.kbretro.babyregistry.domain.DayStats
@@ -23,6 +24,7 @@ import com.kbretro.babyregistry.ui.common.Fmt
 import com.kbretro.babyregistry.ui.common.detail
 import com.kbretro.babyregistry.ui.common.label
 import com.kbretro.babyregistry.ui.common.title
+import com.kbretro.babyregistry.ui.growth.title
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -40,6 +42,7 @@ data class ReportData(
     val growth: List<GrowthEntity>,
     val health: List<EventEntity>,
     val appointments: List<AppointmentEntity>,
+    val milestones: List<MilestoneEntity>,
     val generatedAt: Long,
 )
 
@@ -73,6 +76,7 @@ class ReportExporter @Inject constructor(
             growth = repo.growth(baby.id).first(),
             health = events.filter { it.type in EventType.health }.sortedBy { it.startTime },
             appointments = repo.appointments(baby.id).first().filter { !it.done && it.time >= now },
+            milestones = repo.milestones(baby.id).first().sortedBy { it.time },
             generatedAt = now,
         )
     }
@@ -103,6 +107,7 @@ private class PdfRenderer(private val data: ReportData) {
         dailyTable()
         growth()
         health()
+        milestones()
         appointments()
         footer()
         page?.let(document::finishPage)
@@ -240,6 +245,15 @@ private class PdfRenderer(private val data: ReportData) {
         heading("Temperatura y medicación")
         data.health.forEach { e ->
             text("${Fmt.dayTime(e.startTime)} · ${e.title()}: ${e.detail(data.generatedAt)}")
+        }
+    }
+
+    private fun milestones() {
+        if (data.milestones.isEmpty()) return
+        heading("Hitos")
+        data.milestones.forEach { m ->
+            val date = Fmt.localDate(m.time)
+            text("${Fmt.shortDate(date)} (${Fmt.age(data.baby.birthDate, date)}) · ${m.title()}")
         }
     }
 

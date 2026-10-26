@@ -10,6 +10,8 @@ import com.kbretro.babyregistry.data.model.AppointmentKind
 import com.kbretro.babyregistry.data.model.EventType
 import com.kbretro.babyregistry.data.model.FeedingType
 import com.kbretro.babyregistry.data.model.GrowthEntity
+import com.kbretro.babyregistry.data.model.MilestoneEntity
+import com.kbretro.babyregistry.data.model.MilestoneKind
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -61,7 +63,7 @@ class MigrationTest {
         }
 
         val room = Room.databaseBuilder(context, AppDatabase::class.java, name)
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             .allowMainThreadQueries()
             .build()
         // Abrir la base de datos ejecuta la migración y la validación del esquema de Room.
@@ -87,6 +89,11 @@ class MigrationTest {
                 AppointmentEntity(babyId = 1, time = 5000, kind = AppointmentKind.VACCINE, title = "2 meses"),
             )
             assertEquals(1, room.appointmentDao().observeAll(1).first().size)
+
+            room.milestoneDao().insert(
+                MilestoneEntity(babyId = 1, time = 6000, kind = MilestoneKind.FIRST_WORD, detail = "Mamá"),
+            )
+            assertEquals("Mamá", room.milestoneDao().observeAll(1).first().single().detail)
         }
         room.close()
     }

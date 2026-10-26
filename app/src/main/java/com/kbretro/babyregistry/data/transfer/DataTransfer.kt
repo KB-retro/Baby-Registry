@@ -6,6 +6,7 @@ import android.provider.OpenableColumns
 import com.kbretro.babyregistry.data.model.AppointmentEntity
 import com.kbretro.babyregistry.data.model.EventEntity
 import com.kbretro.babyregistry.data.model.GrowthEntity
+import com.kbretro.babyregistry.data.model.MilestoneEntity
 import com.kbretro.babyregistry.data.repository.TrackerRepository
 import com.kbretro.babyregistry.reminders.Reminders
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -54,6 +55,7 @@ class DataTransfer @Inject constructor(
                 events = repo.all(baby.id).first(),
                 growth = repo.growth(baby.id).first(),
                 appointments = repo.appointments(baby.id).first(),
+                milestones = repo.milestones(baby.id).first(),
             )
         }
         val json = BackupJson.write(babies, System.currentTimeMillis())
@@ -86,7 +88,7 @@ class DataTransfer @Inject constructor(
             is ImportPreview.BabyTracker -> {
                 val babyId = repo.currentBabyId() ?: return@withContext ImportOutcome(0, 0)
                 val r = preview.result
-                addAll(babyId, r.events, r.growth, r.appointments)
+                addAll(babyId, r.events, r.growth, r.appointments, r.milestones)
             }
         }
         reminders.rescheduleAll()
@@ -102,7 +104,7 @@ class DataTransfer @Inject constructor(
                 it.name.equals(backup.baby.name, ignoreCase = true) && it.birthDate == backup.baby.birthDate
             }
             val babyId = match?.id ?: repo.addBaby(backup.baby)
-            val outcome = addAll(babyId, backup.events, backup.growth, backup.appointments)
+            val outcome = addAll(babyId, backup.events, backup.growth, backup.appointments, backup.milestones)
             added += outcome.added
             duplicates += outcome.duplicates
         }
@@ -115,6 +117,7 @@ class DataTransfer @Inject constructor(
         events: List<EventEntity>,
         growth: List<GrowthEntity>,
         appointments: List<AppointmentEntity>,
+        milestones: List<MilestoneEntity>,
     ): ImportOutcome {
         val eventOutcome = addEvents(babyId, events)
 
@@ -126,8 +129,12 @@ class DataTransfer @Inject constructor(
         val newAppointments = appointments.filter { (it.time to it.title) !in keys }
         newAppointments.forEach { repo.insertAppointment(it.copy(id = 0, babyId = babyId)) }
 
-        val added = eventOutcome.added + newGrowth.size + newAppointments.size
-        val total = events.size + growth.size + appointments.size
+        val milestoneKeys = repo.milestones(babyId).first().map { Triple(it.time, it.kind, it.detail) }.toSet()
+        val newMilestones = milestones.filter { Triple(it.time, it.kind, it.detail) !in milestoneKeys }
+        newMilestones.forEach { repo.saveMilestone(it.copy(id = 0, babyId = babyId)) }
+
+        val added = eventOutcome.added + newGrowth.size + newAppointments.size + newMilestones.size
+        val total = events.size + growth.size + appointments.size + milestones.size
         return ImportOutcome(added = added, duplicates = total - added)
     }
 

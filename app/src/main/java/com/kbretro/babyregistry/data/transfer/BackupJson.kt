@@ -10,6 +10,8 @@ import com.kbretro.babyregistry.data.model.EventEntity
 import com.kbretro.babyregistry.data.model.EventType
 import com.kbretro.babyregistry.data.model.FeedingType
 import com.kbretro.babyregistry.data.model.GrowthEntity
+import com.kbretro.babyregistry.data.model.MilestoneEntity
+import com.kbretro.babyregistry.data.model.MilestoneKind
 import com.kbretro.babyregistry.data.model.Sex
 import com.kbretro.babyregistry.data.model.StoolColor
 import org.json.JSONArray
@@ -22,6 +24,7 @@ data class BabyBackup(
     val events: List<EventEntity>,
     val growth: List<GrowthEntity>,
     val appointments: List<AppointmentEntity>,
+    val milestones: List<MilestoneEntity> = emptyList(),
 )
 
 /**
@@ -55,6 +58,7 @@ object BackupJson {
         .put("events", JSONArray(b.events.map(::eventToJson)))
         .put("growth", JSONArray(b.growth.map(::growthToJson)))
         .put("appointments", JSONArray(b.appointments.map(::appointmentToJson)))
+        .put("milestones", JSONArray(b.milestones.map(::milestoneToJson)))
 
     private fun babyFromJson(o: JSONObject): BabyBackup {
         val baby = BabyEntity(
@@ -69,6 +73,7 @@ object BackupJson {
             events = o.optJSONArray("events").objects().mapNotNull(::eventFromJson),
             growth = o.optJSONArray("growth").objects().map(::growthFromJson),
             appointments = o.optJSONArray("appointments").objects().mapNotNull(::appointmentFromJson),
+            milestones = o.optJSONArray("milestones").objects().mapNotNull(::milestoneFromJson),
         )
     }
 
@@ -155,6 +160,23 @@ object BackupJson {
             notes = o.optStringOrNull("notes"),
             reminderAt = o.optLongOrNull("reminderAt"),
             done = o.optBoolean("done"),
+        )
+    }
+
+    private fun milestoneToJson(m: MilestoneEntity): JSONObject = JSONObject()
+        .put("time", m.time)
+        .put("kind", m.kind.name)
+        .putOpt("detail", m.detail)
+        .putOpt("notes", m.notes)
+
+    private fun milestoneFromJson(o: JSONObject): MilestoneEntity? {
+        val kind = enumOrNull<MilestoneKind>(o.optString("kind")) ?: return null
+        return MilestoneEntity(
+            babyId = 0,
+            time = o.getLong("time"),
+            kind = kind,
+            detail = o.optStringOrNull("detail"),
+            notes = o.optStringOrNull("notes"),
         )
     }
 

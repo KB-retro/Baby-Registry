@@ -34,3 +34,15 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
         db.execSQL("ALTER TABLE `babies` ADD COLUMN `hiddenTypes` TEXT")
     }
 }
+
+/** v3 → v4: hitos. */
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `milestones` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`babyId` INTEGER NOT NULL, `time` INTEGER NOT NULL, `kind` TEXT NOT NULL, `detail` TEXT, " +
+                "`notes` TEXT, FOREIGN KEY(`babyId`) REFERENCES `babies`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_milestones_babyId` ON `milestones` (`babyId`)")
+    }
+}

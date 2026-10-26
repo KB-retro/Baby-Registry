@@ -7,6 +7,8 @@ import com.kbretro.babyregistry.data.model.DiaperKind
 import com.kbretro.babyregistry.data.model.EventEntity
 import com.kbretro.babyregistry.data.model.EventType
 import com.kbretro.babyregistry.data.model.GrowthEntity
+import com.kbretro.babyregistry.data.model.MilestoneEntity
+import com.kbretro.babyregistry.data.model.MilestoneKind
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -22,11 +24,12 @@ object BabyTrackerImport {
         val events: List<EventEntity>,
         val growth: List<GrowthEntity>,
         val appointments: List<AppointmentEntity>,
+        val milestones: List<MilestoneEntity>,
         val babyNames: Set<String>,
         /** Lo que no se puede importar, con su número (p. ej. "Hitos" → 4). */
         val skipped: Map<String, Int>,
     ) {
-        val total: Int get() = events.size + growth.size + appointments.size
+        val total: Int get() = events.size + growth.size + appointments.size + milestones.size
     }
 
     private val fileKind = Regex("""_([a-z]+)\.csv$""", RegexOption.IGNORE_CASE)
@@ -45,6 +48,7 @@ object BabyTrackerImport {
         val events = mutableListOf<EventEntity>()
         val growth = mutableListOf<GrowthEntity>()
         val appointments = mutableListOf<AppointmentEntity>()
+        val milestones = mutableListOf<MilestoneEntity>()
         val names = mutableSetOf<String>()
         val skipped = linkedMapOf<String, Int>()
         fun skip(label: String, count: Int = 1) {
@@ -164,7 +168,13 @@ object BabyTrackerImport {
                         )
                     }
                 }
-                "milestone" -> skip("Hitos (la app aún no tiene hitos)", data.size)
+                "milestone" -> {
+                    val nameCol = column("momento", "milestone", "hito")
+                    data.forEach { row ->
+                        val at = time(row) ?: return@forEach skip("Hitos sin fecha válida")
+                        milestones += milestone(row.getOrNull(nameCol)?.trim().orEmpty(), note(row), at)
+                    }
+                }
                 else -> {
                     // Tipos sin formato verificado (pecho, sueño…): se intenta con el analizador general,
                     // añadiendo el tipo del nombre del archivo como palabra clave.
@@ -179,9 +189,39 @@ object BabyTrackerImport {
             events = events.distinctBy { it.importKey() }.sortedBy { it.startTime },
             growth = growth.distinctBy { it.date }.sortedBy { it.date },
             appointments = appointments,
+            milestones = milestones,
             babyNames = names,
             skipped = skipped,
         )
+    }
+
+    /**
+     * Traduce el nombre del hito de Baby Tracker a un tipo de la app. Para los tipos que piden
+     * "cuál" (operación, primera palabra…) la nota de Baby Tracker se usa como detalle.
+     */
+    fun milestone(name: String, note: String?, time: Long): MilestoneEntity {
+        val n = RecordParser.normalize(name)
+        val kind = when {
+            "cordon" in n || "umbilical" in n || "cord" in n -> MilestoneKind.UMBILICAL_CORD
+            "diente" in n || "tooth" in n -> MilestoneKind.FIRST_TOOTH
+            "operacion" in n || "cirugia" in n || "surgery" in n || "operation" in n -> MilestoneKind.SURGERY
+            "palabra" in n || "word" in n -> MilestoneKind.FIRST_WORD
+            "carcajada" in n || "risa" in n || "laugh" in n -> MilestoneKind.FIRST_LAUGH
+            "sonrisa" in n || "smile" in n -> MilestoneKind.FIRST_SMILE
+            "paso" in n || "camin" in n || "step" in n || "walk" in n -> MilestoneKind.FIRST_STEPS
+            "gate" in n || "crawl" in n -> MilestoneKind.CRAWLS
+            "sienta" in n || "sentad" in n || "sit" in n -> MilestoneKind.SITS
+            "vuelta" in n || "roll" in n -> MilestoneKind.ROLLS_OVER
+            "cabeza" in n || "head" in n -> MilestoneKind.HOLDS_HEAD
+            "comida" in n || "solido" in n || "food" in n -> MilestoneKind.FIRST_FOOD
+            else -> MilestoneKind.OTHER
+        }
+        val asksDetail = kind in setOf(MilestoneKind.SURGERY, MilestoneKind.FIRST_WORD, MilestoneKind.FIRST_TOOTH, MilestoneKind.FIRST_FOOD)
+        return when {
+            kind == MilestoneKind.OTHER -> MilestoneEntity(babyId = 0, time = time, kind = kind, detail = name.ifEmpty { null }, notes = note)
+            asksDetail && note != null -> MilestoneEntity(babyId = 0, time = time, kind = kind, detail = note.trimEnd('.', ' '))
+            else -> MilestoneEntity(babyId = 0, time = time, kind = kind, notes = note)
+        }
     }
 
     /** Decide si las fechas van día/mes (como en España) o mes/día mirando todo el archivo. */

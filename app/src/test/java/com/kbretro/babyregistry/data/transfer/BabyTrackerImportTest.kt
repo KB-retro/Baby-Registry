@@ -3,6 +3,7 @@ package com.kbretro.babyregistry.data.transfer
 import com.kbretro.babyregistry.data.model.AppointmentKind
 import com.kbretro.babyregistry.data.model.DiaperKind
 import com.kbretro.babyregistry.data.model.EventType
+import com.kbretro.babyregistry.data.model.MilestoneKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -46,7 +47,11 @@ class BabyTrackerImportTest {
         """.trimIndent(),
         "Ana_milestone.csv" to """
             Bebé,Hora,Momento clave,Nota
+            "Ana","8/5/26 1:30","Caída Cordón umbilical",""
+            "Ana","12/6/26 10:00","Operación ","Frenectomía corte frenillo."
             "Ana","16/10/26 12:57","Primer diente",""
+            "Ana","20/10/26 18:00","Primera palabra","Mamá"
+            "Ana","21/10/26 9:00","Bautizo","En la iglesia del pueblo"
         """.trimIndent(),
     )
 
@@ -87,7 +92,18 @@ class BabyTrackerImportTest {
         assertEquals("PCV", vaccine.title)
         assertTrue(vaccine.done)
 
-        assertEquals(mapOf("Pañales \"Seco\" (sin equivalente)" to 1, "Hitos (la app aún no tiene hitos)" to 1), r.skipped)
+        assertEquals(mapOf("Pañales \"Seco\" (sin equivalente)" to 1), r.skipped)
+
+        val milestones = r.milestones
+        assertEquals(
+            listOf(MilestoneKind.UMBILICAL_CORD, MilestoneKind.SURGERY, MilestoneKind.FIRST_TOOTH, MilestoneKind.FIRST_WORD, MilestoneKind.OTHER),
+            milestones.map { it.kind },
+        )
+        assertEquals("Frenectomía corte frenillo", milestones[1].detail)
+        assertEquals("Mamá", milestones[3].detail)
+        assertEquals("Bautizo", milestones[4].detail)
+        assertEquals("En la iglesia del pueblo", milestones[4].notes)
+        assertEquals(at("2026-05-08T01:30"), milestones[0].time)
     }
 
     @Test

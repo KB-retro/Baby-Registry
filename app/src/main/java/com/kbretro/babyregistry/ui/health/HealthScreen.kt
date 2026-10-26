@@ -115,11 +115,15 @@ fun HealthScreen(viewModel: HealthViewModel = hiltViewModel()) {
         ) {
             item(key = "actions") {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    HealthAction(EventType.TEMPERATURE.style().icon, "Temperatura", EventType.TEMPERATURE.style().color, Modifier.weight(1f)) {
-                        entry = EntryRequest(EventType.TEMPERATURE)
+                    if (EventType.TEMPERATURE !in state.hidden) {
+                        HealthAction(EventType.TEMPERATURE.style().icon, "Temperatura", EventType.TEMPERATURE.style().color, Modifier.weight(1f)) {
+                            entry = EntryRequest(EventType.TEMPERATURE)
+                        }
                     }
-                    HealthAction(EventType.MEDICINE.style().icon, "Medicamento", EventType.MEDICINE.style().color, Modifier.weight(1f)) {
-                        entry = EntryRequest(EventType.MEDICINE)
+                    if (EventType.MEDICINE !in state.hidden) {
+                        HealthAction(EventType.MEDICINE.style().icon, "Medicamento", EventType.MEDICINE.style().color, Modifier.weight(1f)) {
+                            entry = EntryRequest(EventType.MEDICINE)
+                        }
                     }
                     HealthAction(Icons.Rounded.Event, "Cita", AppointmentColor, Modifier.weight(1f)) {
                         addingAppointment = true

@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.kbretro.babyregistry.data.model.FeedingType
 import com.kbretro.babyregistry.data.model.Sex
 import com.kbretro.babyregistry.ui.common.ChoiceRow
 import com.kbretro.babyregistry.ui.common.DateField
@@ -42,6 +43,7 @@ fun OnboardingScreen(viewModel: OnboardingViewModel = hiltViewModel()) {
     var name by rememberSaveable { mutableStateOf("") }
     var birthDate by rememberSaveable { mutableStateOf<LocalDate?>(null) }
     var sex by rememberSaveable { mutableStateOf(Sex.UNSPECIFIED) }
+    var feeding by rememberSaveable { mutableStateOf<FeedingType?>(null) }
 
     Scaffold { padding ->
         Column(
@@ -77,9 +79,16 @@ fun OnboardingScreen(viewModel: OnboardingViewModel = hiltViewModel()) {
             DateField("Fecha de nacimiento", birthDate, { birthDate = it })
             Text("Sexo (para las curvas de crecimiento)", style = MaterialTheme.typography.labelLarge)
             ChoiceRow(Sex.entries.map { it to it.label }, sex, { sex = it })
+            Text("Lactancia", style = MaterialTheme.typography.labelLarge)
+            ChoiceRow(FeedingType.entries.map { it to it.label }, feeding, { feeding = if (it == feeding) null else it })
+            Text(
+                "Ocultaremos los registros que no uses (por ejemplo, el biberón con lactancia materna). Podrás cambiarlo en el perfil.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Spacer(Modifier.height(8.dp))
             Button(
-                onClick = { birthDate?.let { viewModel.save(name, it, sex) } },
+                onClick = { birthDate?.let { viewModel.save(name, it, sex, feeding) } },
                 enabled = name.isNotBlank() && birthDate != null,
                 modifier = Modifier
                     .fillMaxWidth()

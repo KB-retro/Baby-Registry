@@ -39,9 +39,17 @@ import com.kbretro.babyregistry.ui.common.Fmt
 import com.kbretro.babyregistry.ui.common.style
 
 @Composable
-fun QuickActions(activeTypes: Set<EventType>, onClick: (EventType) -> Unit) {
+fun QuickActions(types: List<EventType>, activeTypes: Set<EventType>, onClick: (EventType) -> Unit) {
+    if (types.isEmpty()) {
+        Text(
+            "Todos los registros diarios están ocultos. Toca la inicial del bebé para mostrarlos.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        return
+    }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        EventType.daily.forEach { type ->
+        types.forEach { type ->
             val style = type.style()
             val active = type in activeTypes
             Surface(

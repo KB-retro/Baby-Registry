@@ -3,6 +3,7 @@ package com.kbretro.babyregistry.ui.onboarding
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kbretro.babyregistry.data.model.BabyEntity
+import com.kbretro.babyregistry.data.model.FeedingType
 import com.kbretro.babyregistry.data.model.Sex
 import com.kbretro.babyregistry.data.repository.TrackerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,7 +16,8 @@ class OnboardingViewModel @Inject constructor(
     private val repo: TrackerRepository,
 ) : ViewModel() {
 
-    fun save(name: String, birthDate: LocalDate, sex: Sex) = viewModelScope.launch {
-        repo.addBaby(BabyEntity(name = name.trim(), birthDate = birthDate, sex = sex))
+    fun save(name: String, birthDate: LocalDate, sex: Sex, feeding: FeedingType?) = viewModelScope.launch {
+        val baby = BabyEntity(name = name.trim(), birthDate = birthDate, sex = sex, feedingType = feeding)
+        repo.addBaby(baby.withHidden(feeding?.autoHidden.orEmpty()))
     }
 }

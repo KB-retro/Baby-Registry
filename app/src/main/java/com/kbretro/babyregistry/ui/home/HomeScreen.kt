@@ -14,7 +14,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ImportExport
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -52,7 +56,7 @@ import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(onSeeAll: () -> Unit, viewModel: HomeViewModel = hiltViewModel()) {
+fun HomeScreen(onSeeAll: () -> Unit, onOpenData: () -> Unit, viewModel: HomeViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val now = rememberNow()
     var entry by remember { mutableStateOf<EntryRequest?>(null) }
@@ -74,6 +78,11 @@ fun HomeScreen(onSeeAll: () -> Unit, viewModel: HomeViewModel = hiltViewModel())
         topBar = {
             TopAppBar(
                 navigationIcon = { BabyAvatar(baby.name, onClick = { switcher = true }) },
+                actions = {
+                    IconButton(onClick = onOpenData) {
+                        Icon(Icons.Rounded.ImportExport, contentDescription = "Importar y exportar")
+                    }
+                },
                 title = {
                     Column {
                         Text(baby.name, style = MaterialTheme.typography.titleLarge)
@@ -124,7 +133,11 @@ fun HomeScreen(onSeeAll: () -> Unit, viewModel: HomeViewModel = hiltViewModel())
             item(key = "actions") {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     SectionTitle("Registrar")
-                    QuickActions(state.activeTypes, onClick = { entry = EntryRequest(it) })
+                    QuickActions(
+                        types = EventType.daily.filter(baby::isVisible),
+                        activeTypes = state.activeTypes,
+                        onClick = { entry = EntryRequest(it) },
+                    )
                 }
             }
             item(key = "since") { SinceRow(state, now) }

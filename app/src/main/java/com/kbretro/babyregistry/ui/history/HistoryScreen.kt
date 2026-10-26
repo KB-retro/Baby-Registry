@@ -60,7 +60,7 @@ fun HistoryScreen(viewModel: HistoryViewModel = hiltViewModel()) {
             contentPadding = PaddingValues(top = padding.calculateTopPadding(), bottom = 24.dp),
         ) {
             item(key = "filters") {
-                FilterBar(selected = state.filter, onSelect = viewModel::setFilter)
+                FilterBar(types = state.types, selected = state.filter, onSelect = viewModel::setFilter)
             }
             if (state.loaded && state.days.isEmpty()) {
                 item(key = "empty") {
@@ -112,7 +112,7 @@ fun HistoryScreen(viewModel: HistoryViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun FilterBar(selected: EventType?, onSelect: (EventType?) -> Unit) {
+private fun FilterBar(types: List<EventType>, selected: EventType?, onSelect: (EventType?) -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -121,7 +121,7 @@ private fun FilterBar(selected: EventType?, onSelect: (EventType?) -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         FilterChip(selected = selected == null, onClick = { onSelect(null) }, label = { Text("Todo") })
-        EventType.entries.forEach { type ->
+        types.forEach { type ->
             val style = type.style()
             FilterChip(
                 selected = selected == type,

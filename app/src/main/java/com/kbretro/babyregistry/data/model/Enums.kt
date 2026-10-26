@@ -27,3 +27,10 @@ enum class StoolColor(val isWarning: Boolean = false) {
 }
 
 enum class AppointmentKind { DOCTOR, VACCINE, OTHER }
+
+/** Tipo de lactancia. Al elegirlo se ocultan automáticamente los registros que no aplican. */
+enum class FeedingType(val autoHidden: Set<EventType>) {
+    BREAST(setOf(EventType.BOTTLE)),
+    FORMULA(setOf(EventType.BREAST)),
+    MIXED(emptySet()),
+}
